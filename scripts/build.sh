@@ -15,7 +15,7 @@ swiftc -swift-version 5 -O -target "$ARCH-apple-macosx14.0" native/main.swift na
 cp native/Info.plist "$APP/Contents/Info.plist"
 cp -R ui "$APP/Contents/Resources/"
 mkdir -p "$APP/Contents/Resources/licenses"
-cp LICENSE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/licenses/"
+cp LICENSE NOTICE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/licenses/"
 cp config/runtime.json "$APP/Contents/Resources/qa/runtime/manifest.json"
 swift native/icon.swift build/AppIcon.png
 for n in 16 32 128 256 512; do

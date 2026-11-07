@@ -25,7 +25,7 @@ Apple Silicon is locally validated. Validate Intel on actual hardware before lab
 - Review issue templates and repository moderation settings.
 - Confirm `main` requires PRs, the `macos` check and resolved review conversations; keep workflow permissions read-only.
 - Inspect the staged diff and scanned history. This prepared tree does not contain imported historical commits.
-- Confirm MIT and original third-party notices are present in source and distributed bundles.
+- Confirm Apache-2.0, NOTICE and original third-party notices are present in source and distributed bundles.
 
 ## Binary distribution
 

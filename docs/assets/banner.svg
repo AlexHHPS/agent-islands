@@ -7,6 +7,6 @@
 <text x="48" y="144" font-size="64" font-weight="650" letter-spacing="-2">Agent Islands</text>
 <text x="52" y="203" font-size="30" font-weight="450" letter-spacing="-.5">Your agents. One place.</text>
 <text x="52" y="249" font-size="18" fill="#52634d">Projects, terminals and browser evidence on your Mac.</text>
-<text x="52" y="308" font-size="12" font-weight="600" letter-spacing="1.5">CODEX  /  CLAUDE CODE  /  MIT</text>
+<text x="52" y="308" font-size="12" font-weight="600" letter-spacing="1.5">CODEX  /  CLAUDE CODE  /  APACHE 2.0</text>
 </g><g transform="translate(948 15) scale(2.25)"><path d="M16 76 64 49l48 27v18l-48 27-48-27Z" fill="#8b9877"/><path d="m16 76 48-27 48 27-48 27Z" fill="#c5d1ae"/><path d="m38 65 26-15 27 15v28L64 109 38 94Z" fill="#ece6d5"/><path d="m64 81 27-16v28l-27 16Z" fill="#faf6e9"/><path d="m32 64 32-20 34 20-34 20Z" fill="#b47d5f"/><path d="m64 84 34-20v7L64 91Z" fill="#94654d"/><path d="m73 87 10-6v16l-10 6Z" fill="#42664e"/><path d="m44 77 11 6v10l-11-6Z" fill="#70929a"/><path d="M103 80V55" stroke="#74664f" stroke-width="3"/><ellipse cx="103" cy="51" rx="11" ry="15" fill="#72916c"/></g>
 </svg>

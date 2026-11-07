@@ -8,7 +8,7 @@ Agent Islands uses a quiet forest-green palette, warm surfaces, local fonts and 
 - `assets/banner.svg` and `assets/banner-es.svg`: README wordmark and promise.
 - `assets/workspace-light.png`, `workspace-dark.png`, `browser-reference.png`: actual UI with demonstration fixtures.
 
-The mark is original project artwork, licensed under MIT. It echoes the native app icon without borrowing provider logos. Codex and Claude Code are represented by their names in the documentation.
+The mark is original project artwork, licensed under Apache 2.0. It echoes the native app icon without borrowing provider logos. Codex and Claude Code are represented by their names in the documentation.
 
 ## Tokens
 

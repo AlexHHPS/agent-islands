@@ -3,7 +3,7 @@
 </p>
 
 <p>
-  <a href="LICENSE"><img src="docs/assets/license-mit.svg" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="docs/assets/license-apache.svg" alt="License: Apache 2.0"></a>
   <img src="docs/assets/platform-macos.svg" alt="Platform: macOS 14 or later">
   <img src="docs/assets/status-preview.svg" alt="Status: developer preview">
 </p>
@@ -200,6 +200,10 @@ The project follows a [code of conduct](CODE_OF_CONDUCT.md) and a documented [go
 
 ## License and acknowledgements
 
-Agent Islands is available under the **[MIT License](LICENSE)**. Third-party components keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), including the original notices for Diorama, xterm, the bundled fonts, Node.js and Playwright.
+Agent Islands is available under the **[Apache License 2.0](LICENSE)**. Third-party components keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), including the original notices for Diorama, xterm, the bundled fonts, Node.js and Playwright.
 
-The Agent Islands logo and documentation assets are included under MIT unless a file states otherwise. Codex, Claude Code, macOS and Chromium are names of their respective owners. This is an independent project.
+**Using Agent Islands commercially?** Contact [@AlexHHPS](https://github.com/AlexHHPS) through [Discussions](https://github.com/AlexHHPS/agent-islands/discussions) to discuss integrations, collaboration or commercial support. Contact is optional: Apache 2.0 permits commercial use without asking permission or paying a license fee.
+
+The Apache terms apply to this revision. Earlier public revisions through [`a4d6705`](https://github.com/AlexHHPS/agent-islands/blob/a4d670518e059fec07ae102b50e579503c64f9bc/LICENSE) were offered under MIT; their existing permissions are unchanged.
+
+The Agent Islands logo and documentation assets are included under Apache 2.0 unless a file states otherwise. Codex, Claude Code, macOS and Chromium are names of their respective owners. This is an independent project.

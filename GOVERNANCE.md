@@ -1,6 +1,6 @@
 # Project governance
 
-Agent Islands is an independent, maintainer-led open-source project under the MIT License. The current maintainer is [@AlexHHPS](https://github.com/AlexHHPS); code ownership is recorded in [.github/CODEOWNERS](.github/CODEOWNERS).
+Agent Islands is an independent, maintainer-led open-source project under the Apache License 2.0. The current maintainer is [@AlexHHPS](https://github.com/AlexHHPS); code ownership is recorded in [.github/CODEOWNERS](.github/CODEOWNERS).
 
 ## Decisions
 

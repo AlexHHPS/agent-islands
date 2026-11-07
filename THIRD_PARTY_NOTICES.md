@@ -1,6 +1,6 @@
 # Third-party notices
 
-Agent Islands source is MIT licensed. Third-party components retain their original terms; this file does not replace their license text.
+Agent Islands project code is licensed under Apache-2.0. Third-party components retain their original terms; this file does not replace their license text.
 
 | Component | Use | License and included notice |
 | --- | --- | --- |
@@ -16,4 +16,4 @@ Npm dependencies are pinned in [package-lock.json](package-lock.json). Runtime v
 
 AppKit, WebKit, speech services and other macOS frameworks are supplied by the operating system. Optional research engines are not redistributed by Agent Islands. Review their individual licenses before using or packaging them.
 
-Provider and platform names identify compatibility only. Their owners do not sponsor or endorse this project. The Agent Islands identity assets are original project work covered by the root MIT License.
+Provider and platform names identify compatibility only. Their owners do not sponsor or endorse this project. The Agent Islands identity assets are original project work covered by the root Apache License 2.0.

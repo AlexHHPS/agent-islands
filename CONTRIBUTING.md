@@ -82,6 +82,6 @@ Include macOS version, CPU architecture, app version, CLI versions, expected beh
 
 ## License and conduct
 
-Contribute only code and assets you have the right to share. Your contributions to project code are licensed under [MIT](LICENSE). Keep original third-party license notices and document their origin in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No separate CLA or sign-off is required.
+Contribute only code and assets you have the right to share. Your contributions to project code are licensed under [Apache 2.0](LICENSE). Keep original third-party license notices and document their origin in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Unless you explicitly state otherwise, contributions intentionally submitted for inclusion are provided under Apache 2.0, including its contribution and patent terms. No separate CLA or sign-off is required.
 
 Follow the [code of conduct](CODE_OF_CONDUCT.md) in issues, reviews and discussions. For questions about using the app, see [support](SUPPORT.md).

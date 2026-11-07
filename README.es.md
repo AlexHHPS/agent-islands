@@ -2,7 +2,7 @@
 
 **Un workspace local para Codex y Claude Code en macOS.** Reúne proyectos, terminales, conversaciones y evidencias del navegador en un mismo lugar. Cada proyecto tiene su isla y cada agente muestra su estado.
 
-[English / documentación completa](README.md) · [Instalación](#instalación) · [Contribuir](CONTRIBUTING.md) · [Licencia MIT](LICENSE)
+[English / documentación completa](README.md) · [Instalación](#instalación) · [Contribuir](CONTRIBUTING.md) · [Licencia Apache 2.0](LICENSE)
 
 ![Vista de proyectos con datos de demostración.](docs/assets/workspace-light.png)
 
@@ -61,4 +61,10 @@ npm run check:source
 
 `npm test` necesita la aplicación compilada. Las pruebas usan fixtures; no envían prompts reales a proveedores. La interfaz está en español y el README principal y las guías técnicas están en inglés para facilitar contribuciones.
 
-Lee [CONTRIBUTING.md](CONTRIBUTING.md), el [código de conducta](CODE_OF_CONDUCT.md), las [reglas de gobierno](GOVERNANCE.md), [soporte](SUPPORT.md), [SECURITY.md](SECURITY.md) y el [changelog](CHANGELOG.md). Proyecto independiente bajo [MIT](LICENSE), con [licencias de terceros](THIRD_PARTY_NOTICES.md).
+Lee [CONTRIBUTING.md](CONTRIBUTING.md), el [código de conducta](CODE_OF_CONDUCT.md), las [reglas de gobierno](GOVERNANCE.md), [soporte](SUPPORT.md), [SECURITY.md](SECURITY.md) y el [changelog](CHANGELOG.md). Proyecto independiente bajo [Apache 2.0](LICENSE), con [licencias de terceros](THIRD_PARTY_NOTICES.md).
+
+## Uso comercial y contacto
+
+Apache 2.0 permite el uso comercial sin pedir permiso ni pagar una licencia. Si lo usas en tu empresa, contacta con [@AlexHHPS](https://github.com/AlexHHPS) en [Discussions](https://github.com/AlexHHPS/agent-islands/discussions) para hablar de integraciones, colaboración o soporte comercial. El contacto es voluntario y no es una condición de la licencia.
+
+Las revisiones públicas anteriores hasta [`a4d6705`](https://github.com/AlexHHPS/agent-islands/blob/a4d670518e059fec07ae102b50e579503c64f9bc/LICENSE) se ofrecieron bajo MIT y conservan sus permisos.

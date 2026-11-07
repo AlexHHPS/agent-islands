@@ -34,4 +34,4 @@ Maintainers review reports in context and should protect the reporter's privacy 
 
 Explain decisions to affected people when it is safe and appropriate. A person involved in a report should not be its sole decision-maker; use another uninvolved maintainer when available, or the hosting platform's reporting process. Appeals can use the same safe private channel and should include new context.
 
-No response-time guarantee is implied. This is an original project policy, covered by the repository's MIT License.
+No response-time guarantee is implied. This is an original project policy, covered by the repository's Apache License 2.0.
