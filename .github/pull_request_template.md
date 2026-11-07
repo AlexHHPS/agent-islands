@@ -1,14 +1,21 @@
-## What changes
+## Problem and resulting behavior
 
-Describe the user-visible problem and resulting behavior.
+What user-visible problem does this solve, and what happens after the change?
+Link the relevant issue, if one exists. Explain compatibility or migration impact.
 
 ## Validation
 
-List the checks you ran and any material limits. Use sanitized fixtures for visual proof.
+List the commands or manual journeys you actually ran and their results.
+Identify anything unverified. For UI changes, attach sanitized before/after screenshots.
 
-## Review
+## Risks or follow-up
 
-- [ ] Relevant checks pass.
-- [ ] Documentation reflects the resulting behavior.
-- [ ] No private data, credentials or generated evidence is included.
-- [ ] Any imported code/assets have compatible licenses and original notices.
+Describe relevant tradeoffs, known limits and follow-up work. Remove this section if none apply.
+
+## Contributor checklist
+
+- [ ] I read CONTRIBUTING.md and reviewed the submitted changes.
+- [ ] Relevant checks pass; unrun checks and their limits are stated above.
+- [ ] Documentation and, for user-visible changes, the Unreleased changelog are updated.
+- [ ] No private data, credentials, provider state or generated evidence is included.
+- [ ] Imported code/assets have compatible licenses and retain their original notices.

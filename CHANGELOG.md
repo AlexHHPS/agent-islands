@@ -5,6 +5,7 @@ Changes are grouped by user-visible behavior. Versions before public distributio
 ## 0.11.0 — Unreleased
 
 - Prepare the source tree for sharing under MIT, with contribution, security, privacy, architecture and release documentation.
+- Establish contribution/review conventions, code ownership, community support and governance, issue/PR templates and categorized release notes.
 - Add an original project identity and a visual README with sanitized app fixtures.
 - Replace machine-specific summary configuration with optional endpoint/model settings and endpoint-scoped macOS Keychain credentials. Automatic summaries start off.
 - Remove private project adapters, instruction-mutating scripts and local research output from the shared source.

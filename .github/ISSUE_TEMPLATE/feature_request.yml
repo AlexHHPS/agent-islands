@@ -1,5 +1,6 @@
 name: Feature request
 description: Describe the workflow and the outcome you need.
+labels: [enhancement]
 body:
   - type: textarea
     id: problem

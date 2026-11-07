@@ -187,7 +187,7 @@ GitHub Actions runs checks, builds and fixture tests on macOS. Inspect the [actu
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md). Reproducible bug reports, documentation fixes, accessibility improvements, provider compatibility checks and tests on Intel Macs are useful contributions. Include the observed behavior, expected result and sanitized reproduction steps.
 
-The project follows a [code of conduct](CODE_OF_CONDUCT.md). Report security issues through the process in [SECURITY.md](SECURITY.md).
+The project follows a [code of conduct](CODE_OF_CONDUCT.md) and a documented [governance process](GOVERNANCE.md). Use [support](SUPPORT.md) for questions and report vulnerabilities through [SECURITY.md](SECURITY.md).
 
 ### Current limits and next work
 

@@ -61,4 +61,4 @@ npm run check:source
 
 `npm test` necesita la aplicación compilada. Las pruebas usan fixtures; no envían prompts reales a proveedores. La interfaz está en español y el README principal y las guías técnicas están en inglés para facilitar contribuciones.
 
-Lee [CONTRIBUTING.md](CONTRIBUTING.md), el [código de conducta](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md) y el [changelog](CHANGELOG.md). Proyecto independiente bajo [MIT](LICENSE), con [licencias de terceros](THIRD_PARTY_NOTICES.md).
+Lee [CONTRIBUTING.md](CONTRIBUTING.md), el [código de conducta](CODE_OF_CONDUCT.md), las [reglas de gobierno](GOVERNANCE.md), [soporte](SUPPORT.md), [SECURITY.md](SECURITY.md) y el [changelog](CHANGELOG.md). Proyecto independiente bajo [MIT](LICENSE), con [licencias de terceros](THIRD_PARTY_NOTICES.md).

@@ -18,12 +18,12 @@ Check new and resumed conversations, adding the first directory, a multi-project
 
 Apple Silicon is locally validated. Validate Intel on actual hardware before labeling a downloadable Intel artifact supported. A successful compile alone is insufficient.
 
-## Before opening the repository
+## Repository readiness
 
-- Set the repository description, actual clone/install links and primary language once its URL exists.
-- Enable private vulnerability reporting and document a monitored private contact.
+- Verify the repository description, clone links and community/support links.
+- Confirm private vulnerability reporting is enabled and the security link works.
 - Review issue templates and repository moderation settings.
-- Enable branch protection and required checks; keep workflow permissions read-only.
+- Confirm `main` requires PRs, the `macos` check and resolved review conversations; keep workflow permissions read-only.
 - Inspect the staged diff and scanned history. This prepared tree does not contain imported historical commits.
 - Confirm MIT and original third-party notices are present in source and distributed bundles.
 

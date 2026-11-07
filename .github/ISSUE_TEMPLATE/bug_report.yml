@@ -1,5 +1,6 @@
 name: Bug report
 description: Report reproducible behavior with sanitized data.
+labels: [bug]
 body:
   - type: markdown
     attributes:
