@@ -1,0 +1,5 @@
+# Default maintainer for project code, documentation and repository policy.
+* @AlexHHPS
+
+# Keep ownership and automation changes routed to the repository owner.
+/.github/ @AlexHHPS

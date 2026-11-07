@@ -1,0 +1,34 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+const browser=await chromium.launch({headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1512,height:960}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{window.messages=[];window.webkit={messageHandlers:{native:{postMessage:m=>messages.push(m)}}}});
+ await page.goto(pathToFileURL(resolve('ui/index.html')).href);
+ const projects=[{id:'api',name:'API',path:'/projects/api'},{id:'web',name:'Web',path:'/projects/web'},{id:'other',name:'Otro negocio',path:'/projects/other'}],group={id:'workspace-one',name:'Portal',projectIds:['web','api']};
+ const initial={native:true,projects,allProjects:projects,projectWorkspaces:[],activeWorkspaceId:'',agents:[{id:'a',projectId:'api',name:'API agent',harness:'codex',managed:true,processRunning:true,state:'ready'},{id:'b',projectId:'other',name:'Other agent',harness:'claude',managed:true,processRunning:true,state:'active'}],binaries:{codex:'/bin/codex',claude:'/bin/claude'},docker:{containers:[]}};
+ await page.evaluate(data=>{receiveNative({event:'snapshot',data});aiAuto=false},initial);
+ await page.locator('#workspace-create').click();assert(await page.locator('#workspace-save').isDisabled());
+ assert((await page.locator('.workspace-project span').first().boundingBox()).width>100,'Project names and paths must remain readable beside the checkbox');
+ await page.locator('#workspace-name').fill('Portal');await page.locator('#workspace-projects input[value=api]').check();await page.locator('#workspace-projects input[value=web]').check();
+ await page.locator('#workspace-primary').selectOption('web');await page.locator('#workspace-save').click();
+ const save=await page.evaluate(()=>messages.filter(m=>m.action==='workspaceSave').at(-1));assert.deepEqual(save.projectIds,['web','api']);assert.equal(save.name,'Portal');assert.equal(save.activate,true);assert(await page.locator('#workspace-save').isDisabled());
+ await page.evaluate(()=>receiveNative({event:'workspaceResult',data:{success:false,message:'Disco ocupado'}}));assert((await page.locator('#workspace-error').textContent()).includes('Disco ocupado'));assert.equal(await page.locator('#workspace-name').inputValue(),'Portal');
+ await page.locator('#workspace-save').click();
+ const scoped={...initial,projects:[projects[1],projects[0]],projectWorkspaces:[group],activeWorkspaceId:group.id,activeWorkspaceName:'Portal',agents:[initial.agents[0]],backgroundSessionCount:1};
+ await page.evaluate(data=>{receiveNative({event:'snapshot',data});receiveNative({event:'workspaceResult',data:{success:true}})},scoped);
+ assert(await page.locator('#workspace-dialog').isHidden());assert.equal(await page.locator('#workspace-select').inputValue(),group.id);assert.equal(await page.locator('#world .island').count(),2);assert(!(await page.locator('#team-list').textContent()).includes('Other agent'));assert((await page.locator('#workspace-background').textContent()).includes('1 sesiones'));
+ await page.evaluate(()=>launchDialog());assert.deepEqual(await page.locator('#launch-project option').evaluateAll(els=>els.map(e=>e.value)),['web','api']);await page.locator('#launch-dialog .close-dialog').first().click();
+ await page.evaluate(()=>selectAgent('a'));await page.locator('#prompt').fill('Conserva este encargo');
+ await page.locator('#workspace-select').selectOption('');assert(await page.evaluate(()=>messages.some(m=>m.action==='workspaceActivate'&&m.workspaceId==='')));
+ await page.evaluate(data=>receiveNative({event:'snapshot',data:{...data,projectWorkspaces:[{id:'workspace-one',name:'Portal',projectIds:['web','api']}]}}),initial);
+ assert.equal(await page.locator('#team-list [data-agent]').count(),2);assert.equal(await page.locator('#world .island').count(),4);
+ await page.evaluate(()=>selectAgent('a'));assert.equal(await page.locator('#prompt').inputValue(),'Conserva este encargo','Workspace switching must preserve terminal drafts');
+ await page.evaluate(data=>receiveNative({event:'snapshot',data}),scoped);await page.locator('#workspace-edit').click();assert.equal(await page.locator('#workspace-projects input:checked').count(),2);
+ await page.locator('#workspace-add-folders').click();assert(await page.evaluate(()=>messages.some(m=>m.action==='addProject'&&m.registrationOnly)));
+ await page.evaluate(data=>{receiveNative({event:'snapshot',data:{...data,allProjects:[...data.allProjects,{id:'new',name:'Biblioteca',path:'/projects/lib'}]}});receiveNative({event:'workspaceProjectsAdded',data:{projectIds:['new']}})},scoped);
+ assert(await page.locator('#workspace-projects input[value=new]').isChecked());assert.equal(await page.locator('#workspace-name').inputValue(),'Portal');
+ assert.deepEqual(errors,[]);console.log('PASS workspaces UI: multi-project creation and primary folder, error retention, scoped world/launch, background sessions, saved terminal drafts, editing and directory registration');
+}finally{await browser.close()}

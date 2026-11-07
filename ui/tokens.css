@@ -1,0 +1,27 @@
+/* Product-specific tokens: terminal ANSI palette and harness identity colours.
+   Terminal geometry and Diorama's world palette are intentionally independent
+   from the Atelier UI theme. The UI retains compiled light/dark/AA palettes. */
+:root {
+  --canvas-dot: color-mix(in srgb,var(--foreground) 12%,transparent);
+  --panel-width: 326px;
+  --terminal-bg: #242a28;
+  --terminal-fg: #ecece4;
+  --terminal-muted: #b3bdb4;
+  --terminal-green: #a5c8a6;
+  --terminal-blue: #a9c6db;
+  --terminal-red: #f3a696;
+  --terminal-yellow: #e8cf9b;
+  --terminal-magenta: #cfb4d5;
+  --terminal-cyan: #a3ceca;
+  --terminal-bright: #fffdf4;
+  --terminal-dark: #535e57;
+  --terminal-selection: #617264;
+  --claude-color: #9a5036;
+  --codex-color: var(--primary);
+  --map-blue: #547e8b;
+  --scene-ground: #c4cbaa;
+}
+
+/* Semantic state colours; labels and icons accompany every signal. */
+:root {--signal-working:#336343;--signal-waiting:#8a5c16;--signal-blocked:#aa3f36;--signal-plan:#346b8b;--signal-goal:#77539a;--signal-ready:#42664e;--signal-idle:#626570;--signal-paused:#626570;}
+@media(prefers-color-scheme:dark){:root{--signal-working:#a5c8a6;--signal-waiting:#e8cf9b;--signal-blocked:#f3a696;--signal-plan:#a9c6db;--signal-goal:#cfb4d5;--signal-ready:#a5c8a6;--signal-idle:#b3bdb4;--signal-paused:#b3bdb4;}}

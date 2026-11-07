@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+const browser=await chromium.launch({headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1512,height:960}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{window.messages=[];window.webkit={messageHandlers:{native:{postMessage:m=>messages.push(m)}}}});await page.goto(pathToFileURL(resolve('ui/index.html')).href);
+ const data={native:true,projects:[{id:'p',name:'Portal',path:'/portal'}],agents:[{id:'a',projectId:'p',profileId:'personal',name:'Claude personal',harness:'claude',managed:true,processRunning:true,state:'ready'},{id:'b',projectId:'p',name:'Codex',harness:'codex',managed:true,processRunning:true,state:'ready'}],profiles:[{id:'personal',harness:'claude',name:'Personal'}],binaries:{claude:'/claude',codex:'/codex'},docker:{containers:[]}};
+ await page.evaluate(data=>{receiveNative({event:'snapshot',data});aiAuto=false;selectAgent('a')},data);await page.locator('#prompt').fill('Simplifica este acceso');await page.locator('#composer-browser').click();
+ await page.evaluate(()=>{for(const m of messages.filter(m=>m.action==='operations'))receiveNative({event:'operationsResult',data:{requestId:m.requestId,method:m.method,result:m.method==='snapshot'?{environments:[{id:'env',projectId:'p',name:'Dev'}],logins:[]}:{browsers:[],references:[]}}})});
+ await page.locator('#browser-connect').click();const open=await page.evaluate(()=>messages.filter(m=>m.method==='browser.open').at(-1));assert.equal(open.params.agentId,'a');
+ const frame={id:'browser-one',frameToken:'frame-one',width:1280,height:800,url:'https://example.com/',image:'data:image/svg+xml;base64,'+Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800"><rect width="1280" height="800" fill="white"/></svg>').toString('base64'),tabs:[{index:0,url:'https://example.com',active:true}]};
+ await page.evaluate(({open,frame})=>receiveNative({event:'operationsResult',data:{requestId:open.requestId,method:open.method,result:frame}}),{open,frame});assert(await page.locator('#browser-stage').isVisible());
+ await page.locator('[data-browser-mode=region]').click();const r=await page.locator('#browser-frame').boundingBox();await page.mouse.move(r.x+30,r.y+30);await page.mouse.down();await page.mouse.move(r.x+160,r.y+100);await page.mouse.up();
+ const capture=await page.evaluate(()=>messages.filter(m=>m.method==='browser.capture').at(-1));assert.equal(capture.params.kind,'region');assert(capture.params.width>100);assert.equal(capture.params.frameToken,'frame-one');
+ const ref={id:'reference-one',owner:'a',agentId:'a',kind:'region',name:'Región del navegador',preview:frame.image};
+ await page.evaluate(({capture,ref})=>{receiveNative({event:'visualReference',data:ref});receiveNative({event:'operationsResult',data:{requestId:capture.requestId,method:capture.method,result:{reference:ref}}})},{capture,ref});
+ assert.equal(await page.locator('#prompt').inputValue(),'Simplifica este acceso');assert(await page.locator('.reference-open').isVisible());assert(await page.locator('.composer-reference').evaluate(el=>el.scrollWidth<=el.clientWidth+2),'Reference labels and thumbnails must not be clipped');
+ await page.evaluate(()=>selectAgent('b'));assert(await page.locator('#browser-pane').isHidden());assert(await page.locator('#composer-attachments').isHidden());await page.evaluate(()=>selectAgent('a'));assert(await page.locator('#browser-pane').isVisible());assert(await page.locator('.reference-open').isVisible());
+ await page.locator('#composer').evaluate(form=>form.requestSubmit());const sent=await page.evaluate(()=>messages.filter(m=>m.action==='prompt').at(-1));assert.deepEqual(sent.references,['reference-one']);assert.deepEqual(sent.attachments,[]);assert.equal(sent.text,'Simplifica este acceso');
+ await page.evaluate(sent=>receiveNative({event:'promptRejected',data:{id:'a',text:sent.text,requestId:sent.requestId,message:'Sesión cerrada'}}),sent);assert(await page.locator('.reference-open').isVisible());assert.equal(await page.locator('#prompt').inputValue(),'Simplifica este acceso');
+ await page.locator('#browser-record').click();const record=await page.evaluate(()=>messages.filter(m=>m.method==='browser.record.start').at(-1));await page.evaluate(({record})=>receiveNative({event:'operationsResult',data:{requestId:record.requestId,method:record.method,result:{recording:true,recordingStartedAt:Date.now()/1000}}}),{record});assert((await page.locator('#browser-record').textContent()).includes('Terminar y adjuntar'));
+ await page.locator('#browser-record').click();const stop=await page.evaluate(()=>messages.filter(m=>m.method==='browser.record.stop').at(-1));assert.equal(stop.params.id,'browser-one');
+ await page.evaluate(({data})=>receiveNative({event:'snapshot',data:{...data,activeWorkspaceId:'another',projectWorkspaces:[{id:'another',projectIds:['p']}],agents:[]}}),{data});assert(await page.locator('#browser-pane').isHidden());
+ assert.deepEqual(errors,[]);console.log('PASS browser UI: embedded controls, scaled drag capture, untouched draft, per-agent refs, hidden workspace context, recording controls, harness payload and rejection recovery');
+}finally{await browser.close()}

@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.png binary
+*.icns binary
+*.woff2 binary
+*.sh text eol=lf
+ui/vendor/* linguist-vendored
+# Preserve original third-party license formatting.
+ui/vendor/* -whitespace
