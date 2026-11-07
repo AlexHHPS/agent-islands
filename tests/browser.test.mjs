@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,readFileSync,rmSync,statSync,existsSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createServer} from 'node:http';
+import {chromium} from 'playwright';
+import {QAService} from '../qa/service.mjs';
+
+const root=mkdtempSync(join(tmpdir(),'islands-browser-'));
+writeFileSync(join(root,'profiles.json'),JSON.stringify([{id:'work'},{id:'personal'}]));
+const server=createServer((req,res)=>{res.setHeader('content-type','text/html');res.end(`<!doctype html><style>body{height:1800px;font:24px sans-serif}button{padding:20px}iframe{display:block;width:500px;height:140px}</style><h1>Equipo</h1><input id="secret" type="password" value="private-secret"><button id="invite" onclick="document.querySelector('h1').textContent='Persona invitada'">Invitar persona</button><button id="popup" onclick="window.open('/other')">Abrir detalle</button><iframe srcdoc='<button id="inside">Dentro del marco</button>'></iframe><div id="shadow"></div><script>document.querySelector('#shadow').attachShadow({mode:'open'}).innerHTML='<button id="shadow-button">Componente shadow</button>'</script>`)});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const service=new QAService(root,{chromium:{launch:options=>chromium.launch({...options,headless:true})}});
+try{
+ const env=service.saveEnvironment({name:'Portal',origin:'http://127.0.0.1:'+server.address().port,projectId:'portal',healthPath:'/'});
+ const outside=service.saveEnvironment({name:'Otro negocio',origin:env.origin,projectId:'other'});
+ const params={agentId:'agent-one',profileId:'work',projectIds:['portal']};
+ await assert.rejects(service.dispatch('browser.open',{...params,environmentId:outside.id}),/fuera del workspace/);
+ let frame=await service.dispatch('browser.open',{...params,environmentId:env.id});const id=frame.id,v={...params,id};const session=service.browsers.sessions.get(id);
+ assert(frame.image.startsWith('data:image/jpeg'));assert.equal(frame.width,1280);
+ const point=async selector=>{const b=await session.page.locator(selector).boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2}};
+ const button=await point('#invite');
+ const capture=await service.dispatch('browser.capture',{...v,...button,frameToken:frame.frameToken,kind:'component'});
+ assert.equal(capture.reference.component.selector,'#invite');assert.equal(capture.reference.component.text,'Invitar persona');assert(capture.reference.bounds.width>100);
+ const region=await service.dispatch('browser.capture',{...v,x:0,y:0,width:450,height:180,frameToken:frame.frameToken,kind:'region'});assert.equal(region.reference.kind,'region');
+ const iframe=await session.page.locator('iframe').boundingBox();const inner=await session.page.frameLocator('iframe').locator('#inside').boundingBox();
+ const inspected=await service.dispatch('browser.inspect',{...v,x:inner.x+10,y:inner.y+10,frameToken:frame.frameToken});assert.equal(inspected.component.selector,'#inside');assert(inspected.component.offset.y>=iframe.y);
+ const shadow=await session.page.locator('#shadow-button').boundingBox();const shadowRef=await service.dispatch('browser.capture',{...v,x:shadow.x+8,y:shadow.y+8,kind:'component',frameToken:frame.frameToken});assert.equal(shadowRef.reference.component.shadow,true);
+ const password=await point('#secret'),secretRef=await service.dispatch('browser.capture',{...v,...password,kind:'component',frameToken:frame.frameToken});assert(!JSON.stringify(secretRef.reference).includes('private-secret'));
+ await assert.rejects(service.dispatch('browser.frame',{...v,profileId:'personal'}),/otro perfil/);
+ await assert.rejects(service.dispatch('browser.frame',{...v,agentId:'agent-two'}),/otra conversación/);
+ await assert.rejects(service.dispatch('browser.reference',{...params,referenceId:capture.reference.id,projectIds:['other']}),/workspace/);
+ await assert.rejects(service.dispatch('browser.action',{...v,action:'navigate',url:'file:///etc/passwd'}),/HTTP/);
+ await service.dispatch('browser.record.start',v);
+ await service.dispatch('browser.action',{...v,...button,action:'click',frameToken:frame.frameToken});
+ assert.equal(await session.page.locator('h1').textContent(),'Persona invitada');
+ frame=await service.dispatch('browser.frame',v);
+ await service.dispatch('browser.action',{...v,...await point('#popup'),action:'click',frameToken:frame.frameToken});
+ await session.serial;frame=await service.dispatch('browser.frame',v);assert.equal(frame.tabs.length,2);assert(frame.url.endsWith('/other'));
+ const recording=await service.dispatch('browser.record.stop',v),ref=recording.reference;
+ assert.equal(ref.kind,'recording');assert(ref.images.length>=2);assert.equal(ref.videos.length,2,'Recording must follow popup tabs with video segments');assert(ref.events.some(e=>e.component?.selector==='#invite'));
+ const directory=join(root,'references',ref.id);for(const video of ref.videos){const bytes=readFileSync(join(directory,video));assert.equal(bytes.subarray(0,4).toString('hex'),'1a45dfa3','A real WebM must be encoded');assert(bytes.length>1000);assert.equal(statSync(join(directory,video)).mode&0o777,0o600)}
+ assert(!JSON.stringify(ref).includes('private-secret'));assert(existsSync(join(directory,'index.html')));
+ const old=frame.frameToken;await service.dispatch('browser.action',{...v,action:'wheel',frameToken:old,dy:500});await session.page.waitForTimeout(200);
+ await assert.rejects(service.dispatch('browser.capture',{...v,frameToken:old,kind:'region',x:0,y:0,width:30,height:30}),/cambió/);
+ const list=await service.dispatch('browser.list',params);assert.equal(list.references.length,5);assert((await service.dispatch('browser.list',{...params,profileId:'personal'})).references.length===0);
+ await service.dispatch('browser.close',v);
+ const login=await service.login({profileId:'work',environmentId:env.id});const adopted=await service.dispatch('browser.open',{...params,environmentId:env.id,loginId:login.id});assert.equal(adopted.loginId,login.id);await service.dispatch('browser.close',{...params,id:adopted.id});assert(service.logins.has(login.id),'Closing embedded controls must preserve the login window');await service.closeLogin(login.id);
+ await service.close();const reopened=new QAService(root);assert.equal(reopened.all('reference').length,5,'Visual evidence survives a restart');await reopened.close();
+ console.log('PASS browser: real Chromium control, component/region/shadow/iframe capture, no password values, profile/agent/workspace checks, real segmented WebM recording, timed events, stale selections, existing window control and persistence');
+}finally{if(service.db.isOpen)await service.close();server.closeAllConnections();await new Promise(r=>server.close(r));rmSync(root,{recursive:true,force:true})}

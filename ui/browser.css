@@ -1,0 +1,47 @@
+/* Adopted soft tokens. The browser pixels keep their source colors and viewport geometry. */
+#browser-pane{position:absolute;inset:0;z-index:20;background:var(--background);display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);overflow:auto}
+#browser-pane[hidden]{display:none}
+.browser-heading{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.browser-heading>div{flex:1;min-width:0}
+.browser-heading h2{font-size:var(--text-base);overflow-wrap:anywhere}
+.browser-heading button,.browser-tools button,#browser-address-form button{border:1px solid var(--border);border-radius:var(--radius);font-size:var(--text-xs);min-height:var(--space-10)}
+#browser-setup{max-width:var(--container-narrow);display:flex;flex-direction:column;gap:var(--space-3)}
+#browser-setup[hidden]{display:none}
+#browser-environment{width:100%;min-height:var(--space-10)}
+.browser-setup-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+#browser-controls{display:flex;flex-direction:column;gap:var(--space-2)}
+#browser-controls[hidden]{display:none}
+#browser-address-form{display:flex;gap:var(--space-2)}
+#browser-address{width:0;min-width:0;flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2);font-size:var(--text-xs)}
+#browser-tabs{display:flex;gap:var(--space-2);overflow:auto}
+#browser-tabs button{max-width:var(--container-narrow);white-space:nowrap;text-overflow:ellipsis;overflow:hidden;font-size:var(--text-xs);min-height:var(--space-10);border-bottom:1px solid var(--border)}
+#browser-tabs button[aria-current=page]{color:var(--foreground);border-color:var(--primary)}
+.browser-tools{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.browser-tools [aria-pressed=true]{background:var(--secondary);color:var(--foreground);border-color:var(--primary)}
+#browser-record.is-recording,#browser-recording{color:var(--destructive);background:var(--color-feedback-error-bg)}
+#browser-recording{padding:var(--space-2);border-radius:var(--radius);font-size:var(--text-xs);font-variant-numeric:tabular-nums}
+#browser-status{font-size:var(--text-xs);color:var(--muted-foreground);max-width:var(--measure);margin:0}
+#browser-status.browser-error{color:var(--destructive)}
+#browser-stage{position:relative;flex-shrink:0;line-height:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--card)}
+#browser-frame{display:block;width:100%;height:auto;user-select:none;touch-action:none}
+#browser-frame:focus-visible{outline:var(--space-1) solid var(--ring);outline-offset:calc(-1 * var(--space-1))}
+#browser-pane[data-mode=component] #browser-frame{cursor:crosshair}
+#browser-pane[data-mode=region] #browser-frame{cursor:crosshair}
+#browser-selection{position:absolute;pointer-events:none;outline:2px solid var(--primary);background:color-mix(in srgb,var(--primary) 15%,transparent)}
+#browser-references{font-size:var(--text-xs);display:flex;gap:var(--space-2);flex-wrap:wrap}
+#browser-references h3{flex-basis:100%;font-size:var(--text-xs);color:var(--muted-foreground)}
+#browser-references button,#browser-sessions button,#browser-logins button{border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2) var(--space-3);overflow-wrap:anywhere;text-align:left;min-height:var(--space-10)}
+#browser-sessions,#browser-logins{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.composer-reference{display:grid;grid-template-columns:minmax(0,1fr) var(--space-12);width:calc(var(--space-12) * 3);height:auto;flex-shrink:0;border:1px solid var(--border);border-radius:var(--radius);padding-bottom:var(--space-1)}
+.composer-reference img{grid-column:1;grid-row:1;width:100%;min-width:0;height:var(--space-16);object-fit:cover}
+.composer-reference .reference-open{grid-column:1/-1;grid-row:2;position:static;display:block;width:100%;height:auto;min-height:var(--space-12);border-radius:0;background:var(--card);color:var(--foreground);font-size:var(--text-xs);padding:var(--space-2);text-align:left;white-space:normal}
+.browser-visible .islands-pulse{visibility:hidden}
+@media(max-width:800px){#browser-pane{position:relative;min-height:calc(var(--space-16) * 8)}body.browser-visible #world-view,body.browser-visible #terminals-view{display:none!important}.browser-heading{align-items:flex-start}.browser-tools button{flex:1 1 auto}#open-browser{min-height:var(--space-10)}}
+
+/* Touch target floor uses the adopted 12-step spacing token. */
+@media(max-width:800px){#browser-pane button,#open-browser{min-height:var(--space-12);min-width:var(--space-12)}}
+
+/* Long URLs remain horizontally editable in their single-line address field. */
+#browser-address{text-overflow:ellipsis}
+
+.composer-reference .remove-image{grid-column:2;grid-row:1;min-width:0;width:var(--space-12);height:100%;background:var(--secondary)}

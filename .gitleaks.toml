@@ -1,0 +1,12 @@
+title = "Agent Islands source scanning"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Upstream xterm symbol assignment; vendor SHA-256 is checked separately"
+condition = "AND"
+regexTarget = "match"
+paths = ['''(?:^|/)ui/vendor/xterm\.js$''']
+regexes = ['''^t\.FourKeyMap=t\.TwoKeyMap=void\s*(?:0[; ]?)?$''']

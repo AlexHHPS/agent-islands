@@ -1,0 +1,29 @@
+#operations-dialog{width:min(68rem,calc(100vw - var(--space-8)));max-height:calc(100svh - var(--space-8));overflow:auto}
+body:has(#operations-dialog[open]) .workspace{visibility:hidden}
+#operations-dialog h2{font-size:var(--text-xl)}
+.operations-tabs{display:flex;gap:var(--space-2);border-bottom:1px solid var(--border);padding-bottom:var(--space-3);margin-bottom:var(--space-4);flex-wrap:wrap}
+.operations-tabs button{min-height:44px;border-radius:var(--radius-full);font-size:var(--text-sm)}
+.operations-tabs .selected{background:var(--secondary);color:var(--foreground)}
+.operations-form{display:grid;gap:var(--space-3);max-width:var(--container-narrow);margin-block:var(--space-4)}
+.operations-form label{display:grid;gap:var(--space-1);font-size:var(--text-sm);min-width:0}
+.operations-form input,.operations-form select,.operations-form textarea{width:100%;min-width:0;min-height:44px;font-size:var(--text-sm)}
+.operations-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:var(--space-3)}
+.operations-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.operations-actions button,.operation-row button,.operations-section-heading button{min-height:44px;font-size:var(--text-xs);border:1px solid var(--border);border-radius:var(--radius-full)}
+.operations-section-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-5);margin-bottom:var(--space-3)}
+.operations-section-heading h3{font-size:var(--text-base);font-weight:600}
+.operation-row{display:flex;align-items:center;gap:var(--space-2);padding-block:var(--space-3);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.operation-row>div{flex:1;min-width:12rem}.operation-row strong,.operation-row small{display:block}.operation-row strong{font-size:var(--text-sm);font-weight:600}.operation-row small{font-size:var(--text-xs);color:var(--muted-foreground);overflow-wrap:anywhere;margin-top:var(--space-1)}
+.operation-run{border-top:1px solid var(--border);padding-block:var(--space-3)}
+.operation-run summary{cursor:pointer;min-height:44px;font-size:var(--text-sm);line-height:var(--leading-body)}
+.operation-run summary>strong{margin-inline:var(--space-3);font-weight:500}.operation-run summary>span:last-child{font-size:var(--text-xs);color:var(--muted-foreground)}
+.operation-run p,.operation-run ul,.operation-finding p{font-size:var(--text-sm);line-height:var(--leading-body);max-width:var(--measure);margin-block:var(--space-3);overflow-wrap:anywhere}
+.operation-run ul{padding-left:var(--space-5)}.operation-result{display:inline-block;padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);background:var(--secondary);font-size:var(--text-xs)}
+.operation-result.passed{color:var(--foreground)}.operation-result .icon{width:var(--space-3);height:var(--space-3);vertical-align:middle;color:var(--primary);margin-right:var(--space-1)}.operation-result.failed,.operation-result.blocked,.operation-result.stale,.operations-error{color:var(--destructive)}
+#operations-status{padding:var(--space-3);font-size:var(--text-sm);border:1px solid var(--border);border-radius:var(--radius-sm);max-width:var(--measure)}
+.operations-empty{padding:var(--space-4) 0}.operations-empty h3{font-size:var(--text-base);font-weight:500}.operations-empty p{font-size:var(--text-sm);margin-block:var(--space-2);max-width:var(--measure)}
+.operation-meta,.operation-finding small{font-size:var(--text-xs)!important;color:var(--muted-foreground)}
+.operation-finding{padding:var(--space-3);background:var(--secondary);border-radius:var(--radius-sm);margin-block:var(--space-3)}
+#checkpoint-evidence{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-3)}#checkpoint-evidence button{font-size:var(--text-xs);min-height:44px;text-align:left;border:1px solid var(--border)}
+#open-operations{font-size:var(--text-xs);min-height:44px}
+@media(max-width:800px){#operations-dialog{padding:var(--space-4)}.operations-fields{grid-template-columns:1fr}.operation-run summary>span:last-child{display:block;margin-top:var(--space-2)}.operation-run summary>strong{margin-inline:var(--space-2)}#open-operations{padding-inline:var(--space-2)}}
