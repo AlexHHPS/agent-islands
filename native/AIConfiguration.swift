@@ -10,10 +10,10 @@ struct AIConfiguration: Codable {
     init(endpoint: String, model: String, requiresAPIKey: Bool = false, tokenLimitParameter: String = "max_tokens") throws {
         guard let url = URL(string: endpoint), let host = url.host, url.user == nil, url.password == nil, url.query == nil, url.fragment == nil,
               url.scheme == "https" || (url.scheme == "http" && ["localhost", "127.0.0.1", "::1", "[::1]"].contains(host)) else {
-            throw launchFailure("Usa una URL HTTPS o un servidor HTTP en localhost, sin credenciales ni parámetros.")
+            throw launchFailure(L("Usa una URL HTTPS o un servidor HTTP en localhost, sin credenciales ni parámetros."))
         }
         let name = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, name.utf8.count <= 200, !name.contains("\n"), ["max_tokens", "max_completion_tokens"].contains(tokenLimitParameter) else { throw launchFailure("Indica un modelo válido y un parámetro de límite de tokens compatible.") }
+        guard !name.isEmpty, name.utf8.count <= 200, !name.contains("\n"), ["max_tokens", "max_completion_tokens"].contains(tokenLimitParameter) else { throw launchFailure(L("Indica un modelo válido y un parámetro de límite de tokens compatible.")) }
         self.endpoint = url.absoluteString; self.model = name; self.requiresAPIKey = requiresAPIKey; self.tokenLimitParameter = tokenLimitParameter
     }
     var keychainAccount: String { SHA256.hash(data: Data(endpoint.utf8)).map { String(format: "%02x", $0) }.joined() }
@@ -48,20 +48,20 @@ extension AppDelegate {
                 try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: support.appendingPathComponent("ai.json").path)
                 aiGeneration += 1; aiTask?.cancel(); aiTask = nil; aiCredential = nil; aiCredentialRequest = nil
             } else if method == "ai.key" {
-                guard let config = aiConfiguration() else { throw launchFailure("Guarda primero el servidor y el modelo.") }
-                let alert = NSAlert(); alert.messageText = "Guardar clave de IA"; alert.informativeText = "La clave se guardará en el llavero para \(URL(string: config.endpoint)?.host ?? "este servidor"). No se enviará a la interfaz web."
-                alert.addButton(withTitle: "Guardar clave"); alert.addButton(withTitle: "Cancelar")
-                let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 28)); field.placeholderString = "Clave API"; alert.accessoryView = field
+                guard let config = aiConfiguration() else { throw launchFailure(L("Guarda primero el servidor y el modelo.")) }
+                let alert = NSAlert(); alert.messageText = L("Guardar clave de IA"); alert.informativeText = L("La clave se guardará en el llavero para {0}. No se enviará a la interfaz web.", URL(string: config.endpoint)?.host ?? L("este servidor"))
+                alert.addButton(withTitle: L("Guardar clave")); alert.addButton(withTitle: L("Cancelar"))
+                let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 28)); field.placeholderString = L("Clave API"); alert.accessoryView = field
                 guard alert.runModal() == .alertFirstButtonReturn else { emit("operationsResult", ["requestId": requestID, "method": method, "result": aiSettingsInfo()]); return }
-                guard !field.stringValue.isEmpty, field.stringValue.utf8.count <= 8192 else { throw launchFailure("Indica una clave válida.") }
+                guard !field.stringValue.isEmpty, field.stringValue.utf8.count <= 8192 else { throw launchFailure(L("Indica una clave válida.")) }
                 let query = aiKeyQuery(config), value = [kSecValueData as String: Data(field.stringValue.utf8)]
                 let status = SecItemUpdate(query as CFDictionary, value as CFDictionary)
                 if status == errSecItemNotFound {
                     var item = query; item[kSecValueData as String] = Data(field.stringValue.utf8); item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-                    guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { throw launchFailure("No se pudo guardar la clave en el llavero.") }
-                } else if status != errSecSuccess { throw launchFailure("No se pudo actualizar la clave en el llavero.") }
+                    guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { throw launchFailure(L("No se pudo guardar la clave en el llavero.")) }
+                } else if status != errSecSuccess { throw launchFailure(L("No se pudo actualizar la clave en el llavero.")) }
                 field.stringValue = ""; aiCredential = nil
-            } else if method != "ai.get" { throw launchFailure("Operación de IA desconocida.") }
+            } else if method != "ai.get" { throw launchFailure(L("Operación de IA desconocida.")) }
             emit("operationsResult", ["requestId": requestID, "method": method, "result": aiSettingsInfo()])
         } catch { emit("operationsResult", ["requestId": requestID, "method": method, "error": error.localizedDescription]) }
     }

@@ -22,6 +22,8 @@ npm run check:secrets
 
 | Command | Result |
 | --- | --- |
+| `npm run locales:update` | Generate the offline shared-catalogue UI bundle |
+| `npm run test:locales` | Language switching, scope isolation and content preservation checks |
 | `npm run preview` | Local fixture UI at `http://127.0.0.1:8768/?preview=1` |
 | `npm run check` | JS, shell and plist syntax; asset integrity and documentation links |
 | `npm run build` | Native app and DMG, host architecture, ad hoc signature |
@@ -42,6 +44,8 @@ Tests use temporary roots, local HTTP fixtures, mock native bridge messages and 
 ## UI and design
 
 The UI is plain JavaScript and CSS. `ui/atelier.css` and `ui/tokens.css` define the visual system. Vendor assets and original licenses are committed; the build does not need the original design tools. For a screenshot, use preview fixtures and remove any local identity from the data. See [design](DESIGN.md).
+
+See [localization](LOCALIZATION.md) before adding or editing app text.
 
 ## Runtime and dependencies
 

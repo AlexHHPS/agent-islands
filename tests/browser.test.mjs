@@ -6,6 +6,9 @@ import {createServer} from 'node:http';
 import {chromium} from 'playwright';
 import {QAService} from '../qa/service.mjs';
 
+// Fixture assertions use Spanish independently of the calling harness locale.
+process.env.AGENT_ISLANDS_LANGUAGE='es';
+
 const root=mkdtempSync(join(tmpdir(),'islands-browser-'));
 writeFileSync(join(root,'profiles.json'),JSON.stringify([{id:'work'},{id:'personal'}]));
 const server=createServer((req,res)=>{res.setHeader('content-type','text/html');res.end(`<!doctype html><style>body{height:1800px;font:24px sans-serif}button{padding:20px}iframe{display:block;width:500px;height:140px}</style><h1>Equipo</h1><input id="secret" type="password" value="private-secret"><button id="invite" onclick="document.querySelector('h1').textContent='Persona invitada'">Invitar persona</button><button id="popup" onclick="window.open('/other')">Abrir detalle</button><iframe srcdoc='<button id="inside">Dentro del marco</button>'></iframe><div id="shadow"></div><script>document.querySelector('#shadow').attachShadow({mode:'open'}).innerHTML='<button id="shadow-button">Componente shadow</button>'</script>`)});

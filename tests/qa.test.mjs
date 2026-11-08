@@ -6,6 +6,9 @@ import {createServer} from 'node:http';
 import {chromium} from 'playwright';
 import {QAService} from '../qa/service.mjs';
 
+// Fixture assertions use Spanish independently of the calling harness locale.
+process.env.AGENT_ISLANDS_LANGUAGE='es';
+
 const root=mkdtempSync(join(tmpdir(),'islands-qa-test-'));
 writeFileSync(join(root,'profiles.json'),JSON.stringify([{id:'work',enabled:true},{id:'personal',enabled:true}]));
 let revision='one',posts=0;

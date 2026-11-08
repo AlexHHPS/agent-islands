@@ -16,7 +16,7 @@ await rm(join(cache,name),{recursive:true,force:true});
 execFileSync('/usr/bin/tar',['-xzf',archive,'-C',cache]);
 await rm(join(target,'runtime/bin'),{recursive:true,force:true});await mkdir(join(target,'runtime/bin'),{recursive:true});
 await cp(join(cache,name,'bin/node'),join(target,'runtime/bin/node'));await cp(join(cache,name,'LICENSE'),join(target,'runtime/LICENSE'));
-for(const file of ['service.mjs','browser.mjs'])await cp('qa/'+file,join(target,file));
+for(const file of ['service.mjs','browser.mjs','i18n.mjs'])await cp('qa/'+file,join(target,file));
 await rm(join(target,'node_modules'),{recursive:true,force:true});
 for(const module of ['playwright','playwright-core'])await cp('node_modules/'+module,join(target,'node_modules',module),{recursive:true});
 console.log('QA packaged with verified Node '+version+' and locked Playwright dependencies');
