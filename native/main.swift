@@ -85,7 +85,7 @@ struct Agent: Codable {
 struct FileEntry: Codable { var name: String; var path: String; var directory: Bool }
 
 func confinedURL(root: String, relative: String) throws -> URL {
-    guard let baseResolved = realpath(root, nil) else { throw NSError(domain: "Islands", code: 2, userInfo: [NSLocalizedDescriptionKey: "La carpeta del proyecto no está disponible."]) }
+    guard let baseResolved = realpath(root, nil) else { throw NSError(domain: "Islands", code: 2, userInfo: [NSLocalizedDescriptionKey: L("La carpeta del proyecto no está disponible.")]) }
     defer { free(baseResolved) }
     let basePath = String(cString: baseResolved)
     let base = URL(fileURLWithPath: basePath)
@@ -93,13 +93,13 @@ func confinedURL(root: String, relative: String) throws -> URL {
     // All editor operations target existing files/directories. realpath resolves
     // every component, including symlinks whose final target does not exist.
     guard !relative.hasPrefix("/"), !relative.contains("\0"), let resolved = realpath(requested.path, nil) else {
-        throw NSError(domain: "Islands", code: 2, userInfo: [NSLocalizedDescriptionKey: "La ruta no existe o no está disponible."])
+        throw NSError(domain: "Islands", code: 2, userInfo: [NSLocalizedDescriptionKey: L("La ruta no existe o no está disponible.")])
     }
     defer { free(resolved) }
     let candidatePath = String(cString: resolved)
     let candidate = URL(fileURLWithPath: candidatePath)
     guard candidatePath == basePath || candidatePath.hasPrefix(basePath + "/") else {
-        throw NSError(domain: "Islands", code: 1, userInfo: [NSLocalizedDescriptionKey: "La ruta queda fuera de este proyecto."])
+        throw NSError(domain: "Islands", code: 1, userInfo: [NSLocalizedDescriptionKey: L("La ruta queda fuera de este proyecto.")])
     }
     return candidate
 }
@@ -128,7 +128,7 @@ final class TerminalSignals {
                 else { if oscEscape { buffer.append(27); oscEscape = false }; if buffer.count < 16384 { buffer.append(byte) } }
             } else if escaped { escaped = false; if byte == 93 { inOSC = true; buffer.removeAll(keepingCapacity: true) } }
             else if byte == 27 { escaped = true }
-            else if byte == 7 { notices.append("La terminal solicita tu atención.") }
+            else if byte == 7 { notices.append(L("La terminal solicita tu atención.")) }
         }
         return notices
     }
@@ -145,6 +145,8 @@ if CommandLine.arguments.contains("--self-test") {
         let root = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: root) }
+        AppLanguage.set("es", persist: false)
+        localizationSelfTests()
         agentStateSelfTests()
         try aiConfigurationSelfTests()
         try Data().write(to: root.appendingPathComponent("safe.txt"))
@@ -161,7 +163,7 @@ if CommandLine.arguments.contains("--self-test") {
         let signals = TerminalSignals()
         precondition(signals.consume(Data("\u{1b}]0;terminal title\u{7}".utf8)).isEmpty)
         precondition(signals.consume(Data("\u{1b}]9;Necesito ".utf8)).isEmpty)
-        precondition(signals.consume(Data("permiso\u{1b}\\".utf8)) == ["Necesito permiso"])
+        precondition(signals.consume(Data("permiso\u{1b}\\".utf8)) == [L("Necesito permiso")])
         precondition(signals.consume(Data([7])).count == 1)
         precondition(matchingProject("/home/person/project", in: [Project(id: "observed-home", name: "Home", path: "/home/person")]) == nil)
         precondition(matchingProject("/repo/src", in: [Project(id: "chosen", name: "Repo", path: "/repo")])?.id == "chosen")
@@ -280,6 +282,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         setupMenu()
         let config = WKWebViewConfiguration()
         config.userContentController.add(self, name: "native")
+        config.userContentController.addUserScript(WKUserScript(source: AppLanguage.bootstrapSource, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // Only the bundled local document gets the privileged bridge.
         config.preferences.javaScriptCanOpenWindowsAutomatically = false
         web = WKWebView(frame: .zero, configuration: config)
@@ -299,9 +302,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: "Agent Islands")
         let tray = NSMenu()
-        tray.addItem(withTitle: "Abrir Agent Islands", action: #selector(showWindow), keyEquivalent: "")
+        tray.addItem(withTitle: L("Abrir Agent Islands"), action: #selector(showWindow), keyEquivalent: "")
         tray.addItem(.separator())
-        tray.addItem(withTitle: "Salir", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        tray.addItem(withTitle: L("Salir"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = tray
         UNUserNotificationCenter.current().delegate = self
         let root = Bundle.main.resourceURL!.appendingPathComponent("ui", isDirectory: true).resolvingSymlinksInPath()
@@ -338,11 +341,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         guard pageReady, binaries["codex"] != nil, !startupResumeHandled, let index = CommandLine.arguments.firstIndex(of: "--resume-conversation"), CommandLine.arguments.count > index + 1 else { return }
         startupResumeHandled = true
         let thread = CommandLine.arguments[index + 1]
-        guard UUID(uuidString: thread) != nil, let binary = binaries["codex"] else { message("No se pudo reconectar esta conversación de Codex."); return }
+        guard UUID(uuidString: thread) != nil, let binary = binaries["codex"] else { message(L("No se pudo reconectar esta conversación de Codex.")); return }
         DispatchQueue.global(qos: .utility).async {
             let record = self.readSavedConversations("codex").first { $0.id == thread }
             DispatchQueue.main.async {
-                guard let record else { self.message("La conversación ya no está en el historial local."); return }
+                guard let record else { self.message(L("La conversación ya no está en el historial local.")); return }
                 let project: Project
                 if let existing = matchingProject(record.projectPath, in: self.projects) { project = Project(id: existing.id, name: existing.name, path: record.projectPath) }
                 else { project = Project(id: "observed-" + record.projectPath, name: URL(fileURLWithPath: record.projectPath).lastPathComponent, path: record.projectPath); self.projects.append(project); self.saveProjects() }
@@ -354,13 +357,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     @objc func showWindow() { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
     func setupMenu() {
         let bar = NSMenu(), appMenu = NSMenu(), appItem = NSMenuItem()
-        appMenu.addItem(withTitle: "Acerca de Agent Islands", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("Acerca de Agent Islands"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Ocultar Agent Islands", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Salir de Agent Islands", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: L("Ocultar Agent Islands"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: L("Salir de Agent Islands"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu; bar.addItem(appItem)
-        let edit = NSMenu(title: "Edición"), editItem = NSMenuItem(title: "Edición", action: nil, keyEquivalent: "")
-        for (title, selector, key) in [("Deshacer", "undo:", "z"), ("Rehacer", "redo:", "Z"), ("Cortar", "cut:", "x"), ("Copiar", "copy:", "c"), ("Pegar", "paste:", "v"), ("Seleccionar todo", "selectAll:", "a")] {
+        let edit = NSMenu(title: L("Edición")), editItem = NSMenuItem(title: L("Edición"), action: nil, keyEquivalent: "")
+        for (title, selector, key) in [(L("Deshacer"), "undo:", "z"), (L("Rehacer"), "redo:", "Z"), (L("Cortar"), "cut:", "x"), (L("Copiar"), "copy:", "c"), (L("Pegar"), "paste:", "v"), (L("Seleccionar todo"), "selectAll:", "a")] {
             edit.addItem(withTitle: title, action: Selector(selector), keyEquivalent: key)
         }
         editItem.submenu = edit; bar.addItem(editItem); NSApp.mainMenu = bar
@@ -533,7 +536,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         else { decisionHandler(.cancel) }
     }
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
-        let alert = NSAlert(); alert.messageText = message; alert.addButton(withTitle: "Continuar"); alert.addButton(withTitle: "Cancelar")
+        let alert = NSAlert(); alert.messageText = message; alert.addButton(withTitle: L("Continuar")); alert.addButton(withTitle: L("Cancelar"))
         alert.beginSheetModal(for: window) { response in completionHandler(response == .alertFirstButtonReturn) }
     }
     func emit(_ event: String, _ data: Any) {
@@ -550,7 +553,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
     func publish() {
         for id in Array(agents.keys) where agents[id]?.managed == true { agents[id]?.processRunning = sessions[id]?.process.isRunning == true }
-        let data: [String: Any] = ["projects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(scopedProjects))) ?? [], "allProjects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projects))) ?? [], "projectWorkspaces": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projectWorkspaces))) ?? [], "activeWorkspaceId": activeWorkspaceId ?? "", "activeWorkspaceName": activeProjectWorkspace?.name ?? "", "backgroundSessionCount": agents.values.filter { $0.managed && !agentIsInScope($0) && sessions[$0.id]?.process.isRunning == true }.count, "agents": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(Array(agents.values).filter { agentIsInScope($0) }.sorted { $0.name < $1.name }))) ?? [], "binaries": binaries, "notifications": notifications, "voice": voice, "native": true, "docker": docker, "codexSharedServer": localCodexResumeEndpoint() != nil, "profiles": profiles.filter { $0.enabled }.map { profile -> [String: Any] in var row = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(profile))) as? [String: Any] ?? [:]; row["sharedServer"] = profile.harness == "codex" && localCodexResumeEndpoint(root: URL(fileURLWithPath: profile.configRoot)) != nil; return row }, "workspaceError": workspaceError ?? ""]
+        let data: [String: Any] = ["projects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(scopedProjects))) ?? [], "allProjects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projects))) ?? [], "projectWorkspaces": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projectWorkspaces))) ?? [], "activeWorkspaceId": activeWorkspaceId ?? "", "activeWorkspaceName": activeProjectWorkspace?.name ?? "", "backgroundSessionCount": agents.values.filter { $0.managed && !agentIsInScope($0) && sessions[$0.id]?.process.isRunning == true }.count, "agents": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(Array(agents.values).filter { agentIsInScope($0) }.sorted { $0.name < $1.name }))) ?? [], "binaries": binaries, "notifications": notifications, "voice": voice, "native": true, "docker": docker, "codexSharedServer": localCodexResumeEndpoint() != nil, "profiles": profiles.filter { $0.enabled }.map { profile -> [String: Any] in var row = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(profile))) as? [String: Any] ?? [:]; row["sharedServer"] = profile.harness == "codex" && localCodexResumeEndpoint(root: URL(fileURLWithPath: profile.configRoot)) != nil; return row }, "language": AppLanguage.current, "workspaceError": workspaceError ?? ""]
         if let workspace {
             for agent in agents.values where agent.managed { try? workspace.put("agent", id: agent.id, value: (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(agent))) ?? [:]) }
         }
@@ -568,9 +571,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
               let b = message.body as? [String: Any], let action = b["action"] as? String else { return }
         let project = projects.first { $0.id == b["projectId"] as? String }
         do {
-            if let project, !projectIsInScope(project.id), !["workspaceSave", "workspaceActivate", "addProject"].contains(action) { throw launchFailure("El proyecto está fuera del workspace activo.") }
-            if ["select", "input", "prompt", "resize", "replay", "stop", "mode", "prepareAgentResume"].contains(action), let id = b["id"] as? String, let agent = agents[id], !agentIsInScope(agent) { throw launchFailure("Activa el workspace de esa conversación para continuar.") }
+            if let project, !projectIsInScope(project.id), !["workspaceSave", "workspaceActivate", "addProject"].contains(action) { throw launchFailure(L("El proyecto está fuera del workspace activo.")) }
+            if ["select", "input", "prompt", "resize", "replay", "stop", "mode", "prepareAgentResume"].contains(action), let id = b["id"] as? String, let agent = agents[id], !agentIsInScope(agent) { throw launchFailure(L("Activa el workspace de esa conversación para continuar.")) }
             switch action {
+            case "language":
+                guard let language = b["language"] as? String, AppLanguage.supported.contains(language) else { return }
+                AppLanguage.set(language); setupMenu()
+                let controller = web.configuration.userContentController
+                let otherScripts = controller.userScripts.filter { !$0.source.hasPrefix("window.islandsLanguage=") }
+                controller.removeAllUserScripts()
+                for script in otherScripts { controller.addUserScript(script) }
+                controller.addUserScript(WKUserScript(source: AppLanguage.bootstrapSource, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+                if let menu = statusItem.menu { menu.removeAllItems(); menu.addItem(withTitle: L("Abrir Agent Islands"), action: #selector(showWindow), keyEquivalent: ""); menu.addItem(.separator()); menu.addItem(withTitle: L("Salir"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q") }
             case "ready": publish()
             case "operations": qaCall(b)
             case "visualReferenceOpen": if let id = b["referenceId"] as? String { try openVisualReference(id) }
@@ -582,13 +594,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "checkpoints": try checkpointOperation(b)
             case "openEvidence":
                 guard let run = b["runId"] as? String, UUID(uuidString: run) != nil,
-                      let file = b["file"] as? String, ["page.png", "result.json"].contains(file) else { throw launchFailure("Evidencia no disponible.") }
+                      let file = b["file"] as? String, ["page.png", "result.json"].contains(file) else { throw launchFailure(L("Evidencia no disponible.")) }
                 let url = try confinedURL(root: support.appendingPathComponent("qa/evidence").path, relative: run + "/" + file)
                 NSWorkspace.shared.open(url)
             case "copyText": if let text = b["text"] as? String { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(text.prefix(20000)), forType: .string) }
             case "prepareAgentResume":
                 guard let id = b["id"] as? String, let agent = agents[id], let thread = agent.threadId,
-                      let record = readSavedConversations(agent.harness, profileID: agent.profileId).first(where: { $0.id == thread }) else { throw launchFailure("No se encuentra la conversación. Búscala en el selector.") }
+                      let record = readSavedConversations(agent.harness, profileID: agent.profileId).first(where: { $0.id == thread }) else { throw launchFailure(L("No se encuentra la conversación. Búscala en el selector.")) }
                 savedConversations[conversationKey(agent.harness, thread, agent.profileId)] = record
                 emit("resumeReady", ["projectId": agent.projectId, "harness": agent.harness, "sessionId": thread, "profileId": agent.profileId ?? agent.harness])
             case "intelligence": requestIntelligence(b)
@@ -602,21 +614,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "addProject": chooseProject(forLaunch: b["forLaunch"] as? Bool ?? false, registrationOnly: b["registrationOnly"] as? Bool ?? false)
             case "removeProject":
                 if let project {
-                    guard !agents.values.contains(where: { $0.projectId == project.id && $0.managed && $0.state != "exited" }) else { self.message("Cierra primero las sesiones de esta isla."); return }
+                    guard !agents.values.contains(where: { $0.projectId == project.id && $0.managed && $0.state != "exited" }) else { self.message(L("Cierra primero las sesiones de esta isla.")); return }
                     projects.removeAll { $0.id == project.id }; saveProjects(); publish()
                 }
             case "launch":
-                guard let harness = b["harness"] as? String else { throw launchFailure("Selecciona un harness.") }
+                guard let harness = b["harness"] as? String else { throw launchFailure(L("Selecciona un harness.")) }
                 var launchProject = project
                 let profileID = b["profileId"] as? String
                 let selectedProfile = profile(profileID, harness: harness)
-                if ["codex", "claude"].contains(harness) && profileID != nil && selectedProfile == nil { throw launchFailure("El perfil seleccionado no está disponible.") }
+                if ["codex", "claude"].contains(harness) && profileID != nil && selectedProfile == nil { throw launchFailure(L("El perfil seleccionado no está disponible.")) }
                 let bypass = b["bypassPermissions"] as? Bool ?? false
                 let resume = b["resumeSessionId"] as? String
                 var resumedTitle: String?
                 if let resume {
-                    guard let record = savedConversations[conversationKey(harness, resume, profileID)], pathIsInScope(record.projectPath) else { throw launchFailure("Actualiza el selector y elige una conversación guardada.") }
-                    guard !agents.values.contains(where: { $0.harness == harness && sameProfileIdentity($0.profileId, profileID, harness: harness) && $0.threadId == resume && sessions[$0.id]?.process.isRunning == true }) else { throw launchFailure("Esta conversación ya está abierta en Islands.") }
+                    guard let record = savedConversations[conversationKey(harness, resume, profileID)], pathIsInScope(record.projectPath) else { throw launchFailure(L("Actualiza el selector y elige una conversación guardada.")) }
+                    guard !agents.values.contains(where: { $0.harness == harness && sameProfileIdentity($0.profileId, profileID, harness: harness) && $0.threadId == resume && sessions[$0.id]?.process.isRunning == true }) else { throw launchFailure(L("Esta conversación ya está abierta en Islands.")) }
                     let existing = matchingProject(record.projectPath, in: projects)
                     if let existing { launchProject = Project(id: existing.id, name: existing.name, path: record.projectPath) }
                     else {
@@ -625,15 +637,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     }
                     resumedTitle = record.title
                 }
-                guard let project = launchProject else { throw launchFailure("Selecciona un directorio de trabajo.") }
+                guard let project = launchProject else { throw launchFailure(L("Selecciona un directorio de trabajo.")) }
                 let executable: String
                 let args: [String]
                 if harness == "shell" { executable = "/bin/zsh"; args = ["-l"] }
                 else if harness == "custom" {
-                    guard let path = b["executable"] as? String, path.hasPrefix("/"), fm.isExecutableFile(atPath: path) else { throw launchFailure("Elige la ruta absoluta de un ejecutable instalado.") }
+                    guard let path = b["executable"] as? String, path.hasPrefix("/"), fm.isExecutableFile(atPath: path) else { throw launchFailure(L("Elige la ruta absoluta de un ejecutable instalado.")) }
                     executable = path; args = b["args"] as? [String] ?? []
                 } else {
-                    guard let binary = selectedProfile?.executable ?? binaries[harness] else { throw launchFailure("Este harness no está instalado o no está en PATH.") }
+                    guard let binary = selectedProfile?.executable ?? binaries[harness] else { throw launchFailure(L("Este harness no está instalado o no está en PATH.")) }
                     executable = binary; args = []
                 }
                 let enteredName = b["name"] as? String
@@ -655,9 +667,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 }
             case "prepareResume":
                 guard let harness = b["harness"] as? String, let id = b["sessionId"] as? String,
-                      let record = savedConversations[conversationKey(harness, id, b["profileId"] as? String)] else { throw launchFailure("Actualiza la búsqueda y vuelve a seleccionar la conversación.") }
-                guard pathIsInScope(record.projectPath) else { throw launchFailure("La conversación está fuera del workspace activo.") }
-                guard binaries[harness] != nil else { throw launchFailure("Este harness no está instalado o no está disponible en PATH.") }
+                      let record = savedConversations[conversationKey(harness, id, b["profileId"] as? String)] else { throw launchFailure(L("Actualiza la búsqueda y vuelve a seleccionar la conversación.")) }
+                guard pathIsInScope(record.projectPath) else { throw launchFailure(L("La conversación está fuera del workspace activo.")) }
+                guard binaries[harness] != nil else { throw launchFailure(L("Este harness no está instalado o no está disponible en PATH.")) }
                 let project: Project
                 if let existing = matchingProject(record.projectPath, in: projects) { project = existing }
                 else { project = Project(id: "observed-" + record.projectPath, name: URL(fileURLWithPath: record.projectPath).lastPathComponent, path: record.projectPath); projects.append(project); saveProjects() }
@@ -696,21 +708,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "prompt":
                 if let id = b["id"] as? String, let rawText = b["text"] as? String, rawText.utf8.count <= 100_000, let session = sessions[id] {
                     do {
-                    guard let agent = agents[id], agentIsInScope(agent) else { throw launchFailure("La conversación está fuera del workspace activo.") }
+                    guard let agent = agents[id], agentIsInScope(agent) else { throw launchFailure(L("La conversación está fuera del workspace activo.")) }
                     let visualContext = try visualPromptContext(b["references"] as? [String] ?? [], owner: id)
                     let imageIDs = b["attachments"] as? [String] ?? []
-                    guard imageIDs.allSatisfy({ attachments[$0] != nil }) else { throw launchFailure("Una imagen ya no está disponible. Adjúntala de nuevo.") }
+                    guard imageIDs.allSatisfy({ attachments[$0] != nil }) else { throw launchFailure(L("Una imagen ya no está disponible. Adjúntala de nuevo.")) }
                     let imagePaths = imageIDs.compactMap { attachments[$0]?.path }
                     let contract = agents[id].flatMap { taskContract($0) }
-                    let contractPrefix = contract.map { "Contrato del encargo acordado por el usuario (no amplía permisos de push):\n" + json($0) + "\n\n" } ?? ""
+                    let contractPrefix = contract.map { L("Contrato del encargo acordado por el usuario (no amplía permisos de push):\n") + json($0) + "\n\n" } ?? ""
                     let taskProfile = agents[id].flatMap { agent in profiles.first { $0.id == agent.profileId } }
-                    let policyPrefix = taskProfile.map { "Criterios del perfil: " + $0.policy + "\n\n" } ?? ""
-                    let text = (agents[id]?.executionContext.map { $0 + "\n\n" } ?? "") + policyPrefix + contractPrefix + rawText + visualContext + (imagePaths.isEmpty ? "" : "\n\nImágenes adjuntas locales (abre y examina estos archivos):\n" + imagePaths.joined(separator: "\n"))
-                    guard session.process.isRunning else { emit("promptRejected", ["id": id, "text": rawText, "requestId": b["requestId"] as? String ?? "", "message": "La sesión está cerrada. Vuelve a abrirla para continuar."]); return }
+                    let policyPrefix = taskProfile.map { L("Criterios del perfil: ") + $0.policy + "\n\n" } ?? ""
+                    let text = (agents[id]?.executionContext.map { $0 + "\n\n" } ?? "") + policyPrefix + contractPrefix + rawText + visualContext + (imagePaths.isEmpty ? "" : L("\n\nImágenes adjuntas locales (abre y examina estos archivos):\n") + imagePaths.joined(separator: "\n"))
+                    guard session.process.isRunning else { emit("promptRejected", ["id": id, "text": rawText, "requestId": b["requestId"] as? String ?? "", "message": L("La sesión está cerrada. Vuelve a abrirla para continuar.")]); return }
                     let kind = b["contextKind"] as? String
                     let control = agents[id].map { AgentControlState($0) }
                     if (kind == "status" || kind == "recap"), control?.effective == "working" || control?.effective == "planning" || control?.sessionNeedsAttention == true {
-                        let reason = control?.sessionNeedsAttention == true ? "Responde primero a la decisión pendiente en la terminal." : "El agente sigue trabajando. Envía la consulta cuando termine su turno."
+                        let reason = control?.sessionNeedsAttention == true ? L("Responde primero a la decisión pendiente en la terminal.") : L("El agente sigue trabajando. Envía la consulta cuando termine su turno.")
                         emit("promptRejected", ["id": id, "text": rawText, "contextKind": kind!, "requestId": b["requestId"] as? String ?? "", "message": reason]); return
                     }
                     // Bracketed paste keeps multiline prompts intact. Return submits after paste is consumed.
@@ -722,7 +734,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     emit("promptAccepted", ["id": id, "requestId": b["requestId"] as? String ?? ""])
                     } catch { emit("promptRejected", ["id": id, "text": rawText, "requestId": b["requestId"] as? String ?? "", "message": error.localizedDescription]) }
                 } else {
-                    emit("promptRejected", ["id": b["id"] as? String ?? "", "text": b["text"] as? String ?? "", "requestId": b["requestId"] as? String ?? "", "message": "La sesión no está disponible o el mensaje supera el límite. Vuelve a abrirla o reduce el mensaje."])
+                    emit("promptRejected", ["id": b["id"] as? String ?? "", "text": b["text"] as? String ?? "", "requestId": b["requestId"] as? String ?? "", "message": L("La sesión no está disponible o el mensaje supera el límite. Vuelve a abrirla o reduce el mensaje.")])
                 }
             case "resize":
                 if let id = b["id"] as? String, let cols = b["cols"] as? Int, let rows = b["rows"] as? Int {
@@ -731,7 +743,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 }
             case "stop":
                 if let id = b["id"] as? String, let session = sessions[id] {
-                    let alert = NSAlert(); alert.messageText = "¿Cerrar esta sesión?"; alert.informativeText = "Se detendrá el agente y sus procesos. Su conversación seguirá en el historial del harness."; alert.addButton(withTitle: "Cerrar sesión"); alert.addButton(withTitle: "Cancelar")
+                    let alert = NSAlert(); alert.messageText = L("¿Cerrar esta sesión?"); alert.informativeText = L("Se detendrá el agente y sus procesos. Su conversación seguirá en el historial del harness."); alert.addButton(withTitle: L("Cerrar sesión")); alert.addButton(withTitle: L("Cancelar"))
                     if alert.runModal() == .alertFirstButtonReturn { session.stop() }
                 }
             case "scan": scan()
@@ -741,7 +753,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "dockerAction":
                 guard let id = b["id"] as? String, let operation = b["operation"] as? String,
                       ["start", "stop", "restart"].contains(operation), let binary = binaries["docker"],
-                      let containers = docker["containers"] as? [[String: String]], let container = containers.first(where: { $0["id"] == id }) else { throw launchFailure("Actualiza Docker y selecciona un contenedor.") }
+                      let containers = docker["containers"] as? [[String: String]], let container = containers.first(where: { $0["id"] == id }) else { throw launchFailure(L("Actualiza Docker y selecciona un contenedor.")) }
                 guard !dockerActions.contains(id) else { return }
                 dockerActions.insert(id)
                 DispatchQueue.global(qos: .utility).async {
@@ -768,8 +780,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "saveFile":
                 if let project, let relative = b["path"] as? String, let text = b["text"] as? String, let expected = b["revision"] as? String {
                     let url = try confinedURL(root: project.path, relative: relative)
-                    guard try revision(url) == expected else { self.message("El archivo cambió en disco. Recárgalo antes de guardar para conservar los cambios del agente."); return }
-                    guard text.utf8.count <= 2_000_000 else { self.message("El archivo supera el límite de 2 MB."); return }
+                    guard try revision(url) == expected else { self.message(L("El archivo cambió en disco. Recárgalo antes de guardar para conservar los cambios del agente.")); return }
+                    guard text.utf8.count <= 2_000_000 else { self.message(L("El archivo supera el límite de 2 MB.")); return }
                     try Data(text.utf8).write(to: url, options: .atomic)
                     emit("saved", ["path": relative, "revision": try revision(url)] )
                 }
@@ -789,7 +801,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
     func saveProjects() { if !isTest { try? JSONEncoder().encode(projects).write(to: support.appendingPathComponent("projects.json"), options: .atomic) } }
     func chooseProject(forLaunch: Bool = false, registrationOnly: Bool = false) {
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = !forLaunch; panel.prompt = forLaunch ? "Elegir directorio" : "Añadir isla"
+        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = !forLaunch; panel.prompt = forLaunch ? L("Elegir directorio") : L("Añadir isla")
         panel.beginSheetModal(for: window) { response in
             guard response == .OK else { return }
             for url in panel.urls {
@@ -810,10 +822,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
     @discardableResult func launch(_ project: Project, harness: String, executable: String, args: [String], name: String?, resumeId: String? = nil, bypass: Bool = false, profileID: String? = nil) throws -> String {
         var directory: ObjCBool = false
-        guard fm.fileExists(atPath: project.path, isDirectory: &directory), directory.boolValue else { throw launchFailure("La carpeta de este proyecto ya no está disponible.") }
-        guard projectIsInScope(project.id) else { throw launchFailure("El proyecto no pertenece al workspace activo.") }
+        guard fm.fileExists(atPath: project.path, isDirectory: &directory), directory.boolValue else { throw launchFailure(L("La carpeta de este proyecto ya no está disponible.")) }
+        guard projectIsInScope(project.id) else { throw launchFailure(L("El proyecto no pertenece al workspace activo.")) }
         let group = activeProjectWorkspace, roots = group == nil ? [project] : scopedProjects
-        for root in roots { var directory: ObjCBool = false; guard fm.fileExists(atPath: root.path, isDirectory: &directory), directory.boolValue else { throw launchFailure("No se encuentra el proyecto " + root.name + ". Revisa el workspace.") } }
+        for root in roots { var directory: ObjCBool = false; guard fm.fileExists(atPath: root.path, isDirectory: &directory), directory.boolValue else { throw launchFailure(L("No se encuentra el proyecto ") + root.name + L(". Revisa el workspace.")) } }
         let executionContext = workspaceExecutionContext(group, projects: roots)
         let id = UUID().uuidString, session = Session()
         var hookSettings: String?, notifyCommand: String?
@@ -833,7 +845,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         var arguments = try harnessArguments(harness, base: args, cwd: project.path, resume: resumeId, bypass: bypass, hooks: hookSettings, notify: notifyCommand, remote: isTest ? nil : remote, additionalDirectories: roots.map { $0.path }.filter { $0 != project.path })
         if let selectedProfile, harness == "claude" || harness == "codex" {
             if harness == "claude" {
-                arguments += ["--append-system-prompt", (executionContext.isEmpty ? "" : executionContext + "\n\n") + selectedProfile.policy + "\nMáximo orientativo de agentes simultáneos: \(selectedProfile.maxDelegates). Usa solo la delegación necesaria para el encargo."]
+                arguments += ["--append-system-prompt", (executionContext.isEmpty ? "" : executionContext + "\n\n") + selectedProfile.policy + L("\nMáximo orientativo de agentes simultáneos: {0}. Usa solo la delegación necesaria para el encargo.", selectedProfile.maxDelegates)]
                 if let mcp = qaMCP(selectedProfile, projectIds: group?.projectIds) { arguments += ["--mcp-config", json(["mcpServers": ["islands-qa": mcp]])] }
             } else {
                 arguments += ["-c", "agents.max_concurrent_threads_per_session=\(selectedProfile.maxDelegates)"]
@@ -851,6 +863,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         environment["AGENT_ISLANDS_ID"] = id; environment["AGENT_ISLANDS_EVENT_COMMAND"] = own
         // Prevent a parent Claude session from incorrectly treating this independent terminal as nested.
         environment.removeValue(forKey: "CLAUDECODE")
+        environment["AGENT_ISLANDS_LANGUAGE"] = AppLanguage.current
         session.process.environment = environment
         session.process.standardInput = session.input
         session.process.standardOutput = session.output
@@ -879,7 +892,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.agents[id]?.state = process.terminationStatus == 0 || session?.stopped == true ? "exited" : "error"
-                self.agents[id]?.message = "Sesión cerrada (\(process.terminationStatus))."
+                self.agents[id]?.message = L("Sesión cerrada ({0}).", process.terminationStatus)
                 session?.output.fileHandleForReading.readabilityHandler = nil
                 for child in self.agents.values.filter({ $0.parentId == id }) { self.agents[child.id]?.state = "exited" }
                 self.publish()
@@ -996,7 +1009,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     if let existing { project = existing }
                     else { project = Project(id: projectId, name: URL(fileURLWithPath: cwd).lastPathComponent, path: cwd); self.projects.append(project) }
                     let id = managedId ?? "codex-goal-" + (goal["profileId"] ?? "codex") + "-" + thread
-                    if self.agents[id] == nil { self.agents[id] = Agent(id: id, projectId: project.id, name: "Goal · " + String((goal["title"] ?? "Codex").prefix(60)), harness: "codex", state: "observed", managed: false, pid: 0) }
+                    if self.agents[id] == nil { self.agents[id] = Agent(id: id, projectId: project.id, name: L("Goal · ") + String((goal["title"] ?? "Codex").prefix(60)), harness: "codex", state: "observed", managed: false, pid: 0) }
                     self.agents[id]?.profileId = goal["profileId"] ?? "codex"; self.agents[id]?.profileName = self.profiles.first { $0.id == goal["profileId"] }?.name
                     for target in managedIds.isEmpty ? [id] : managedIds {
                         self.agents[target]?.threadId = thread
@@ -1073,9 +1086,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func readFile(_ project: Project, relative: String) throws {
         let url = try confinedURL(root: project.path, relative: relative)
         let a = try fm.attributesOfItem(atPath: url.path)
-        guard (a[.size] as? Int ?? 0) <= 2_000_000 else { message("Este editor abre archivos de hasta 2 MB."); return }
+        guard (a[.size] as? Int ?? 0) <= 2_000_000 else { message(L("Este editor abre archivos de hasta 2 MB.")); return }
         let bytes = try Data(contentsOf: url)
-        guard let text = String(data: bytes, encoding: .utf8), !text.contains("\0") else { message("Este archivo es binario o no está codificado en UTF-8."); return }
+        guard let text = String(data: bytes, encoding: .utf8), !text.contains("\0") else { message(L("Este archivo es binario o no está codificado en UTF-8.")); return }
         emit("file", ["projectId": project.id, "path": relative, "text": text, "revision": try revision(url)])
     }
     func consumeEvents() {
@@ -1117,7 +1130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 }
             }
             if needsQuestion || state == "waiting" || state == "ready" || state == "error" {
-                let brief = text.isEmpty ? (state == "waiting" ? "Necesito tu atención." : "He terminado mi turno.") : String(text.prefix(180))
+                let brief = text.isEmpty ? (state == "waiting" ? L("Necesito tu atención.") : L("He terminado mi turno.")) : String(text.prefix(180))
                 alert(id, message: brief)
                 if voice { speak(parent.name + ". " + brief) }
             }
@@ -1130,7 +1143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { allowed, error in
             DispatchQueue.main.async {
                 self.notifications = allowed; UserDefaults.standard.set(allowed, forKey: "notifications"); self.publish()
-                if let error { self.fail(error) } else if !allowed { self.message("Puedes permitir avisos en Ajustes del Sistema → Notificaciones → Agent Islands.") }
+                if let error { self.fail(error) } else if !allowed { self.message(L("Puedes permitir avisos en Ajustes del Sistema → Notificaciones → Agent Islands.")) }
             }
         }
     }
@@ -1145,26 +1158,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
     func speak(_ text: String) {
         synthesizer.stopSpeaking(at: .immediate)
-        let utterance = AVSpeechUtterance(string: String(text.prefix(3000))); utterance.voice = AVSpeechSynthesisVoice(language: "es-ES"); synthesizer.speak(utterance)
+        let utterance = AVSpeechUtterance(string: String(text.prefix(3000))); utterance.voice = AVSpeechSynthesisVoice(language: AppLanguage.locale); synthesizer.speak(utterance)
     }
     func startDictation() {
         SFSpeechRecognizer.requestAuthorization { status in
-            guard status == .authorized else { DispatchQueue.main.async { self.emit("dictation", ["recording": false]); self.message("Permite el reconocimiento de voz en Ajustes del Sistema → Privacidad y seguridad.") }; return }
+            guard status == .authorized else { DispatchQueue.main.async { self.emit("dictation", ["recording": false]); self.message(L("Permite el reconocimiento de voz en Ajustes del Sistema → Privacidad y seguridad.")) }; return }
             AVCaptureDevice.requestAccess(for: .audio) { allowed in
                 DispatchQueue.main.async {
-                    guard allowed else { self.emit("dictation", ["recording": false]); self.message("Permite el micrófono en Ajustes del Sistema → Privacidad y seguridad."); return }
+                    guard allowed else { self.emit("dictation", ["recording": false]); self.message(L("Permite el micrófono en Ajustes del Sistema → Privacidad y seguridad.")); return }
                     self.beginDictation()
                 }
             }
         }
     }
     func beginDictation() {
-        guard audioEngine == nil, let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "es-ES")), recognizer.isAvailable else { message("El dictado no está disponible ahora."); return }
+        guard audioEngine == nil, let recognizer = SFSpeechRecognizer(locale: Locale(identifier: AppLanguage.locale)), recognizer.isAvailable else { message(L("El dictado no está disponible ahora.")); return }
         let engine = AVAudioEngine(), request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         if recognizer.supportsOnDeviceRecognition { request.requiresOnDeviceRecognition = true }
         let node = engine.inputNode, format = engine.inputNode.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else { message("No hay un micrófono disponible."); return }
+        guard format.sampleRate > 0, format.channelCount > 0 else { message(L("No hay un micrófono disponible.")); return }
         node.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in request.append(buffer) }
         audioEngine = engine; speechRequest = request
         speechTask = recognizer.recognitionTask(with: request) { result, error in
@@ -1183,12 +1196,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if hasUnsavedFile && !isTest {
-            let alert = NSAlert(); alert.messageText = "Hay cambios sin guardar"; alert.informativeText = "Vuelve al editor y pulsa ⌘S para conservarlos."; alert.addButton(withTitle: "Volver al editor"); alert.addButton(withTitle: "Salir sin guardar")
+            let alert = NSAlert(); alert.messageText = L("Hay cambios sin guardar"); alert.informativeText = L("Vuelve al editor y pulsa ⌘S para conservarlos."); alert.addButton(withTitle: L("Volver al editor")); alert.addButton(withTitle: L("Salir sin guardar"))
             if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
         }
         let active = sessions.values.filter { $0.process.isRunning }
         if !active.isEmpty && !isTest {
-            let alert = NSAlert(); alert.messageText = "Hay \(active.count) sesiones abiertas"; alert.informativeText = "Salir cerrará sus terminales y detendrá los agentes que has lanzado aquí."; alert.addButton(withTitle: "Salir y cerrar sesiones"); alert.addButton(withTitle: "Seguir trabajando")
+            let alert = NSAlert(); alert.messageText = active.count == 1 ? L("Hay una sesión abierta") : L("Hay {0} sesiones abiertas", active.count); alert.informativeText = L("Salir cerrará sus terminales y detendrá los agentes que has lanzado aquí."); alert.addButton(withTitle: L("Salir y cerrar sesiones")); alert.addButton(withTitle: L("Seguir trabajando"))
             if alert.runModal() != .alertFirstButtonReturn { return .terminateCancel }
         }
         stopDictation(); for s in active { s.stop() }; return .terminateNow

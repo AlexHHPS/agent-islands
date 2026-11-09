@@ -9,6 +9,7 @@ Agent Islands project code is licensed under Apache-2.0. Third-party components 
 | xterm addon-fit | Terminal sizing | MIT; [license](ui/vendor/addon-fit-LICENSE) |
 | Figtree | UI font | SIL Open Font License 1.1; [notice](ui/vendor/Figtree-OFL.txt) |
 | JetBrains Mono | Monospace font | SIL Open Font License 1.1; [notice](ui/vendor/JetBrains-Mono-OFL.txt) |
+| Acorn | Development-time catalogue coverage checks | MIT; original LICENSE accompanies the npm package; not packaged in the app |
 | Playwright and playwright-core | Browser automation and testing | Apache-2.0; original LICENSE/NOTICE files accompany installed and packaged modules |
 | Node.js | Bundled QA runtime | Node.js distribution license, including bundled third-party terms; copied into the app under `Contents/Resources/qa/runtime/LICENSE` |
 

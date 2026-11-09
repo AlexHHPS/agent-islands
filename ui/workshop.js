@@ -14,9 +14,9 @@ function workshopFigure(project,index,agents,onPick,docker=false) {
   const variant=[...project.name].reduce((n,c)=>(n+c.charCodeAt(0))%3,0);
   return Diorama.figure({
     name:'campus-'+index,size:'hero',theme:{base:'soft',accent:'#66816b',bg:'transparent',halo:.2},
-    title:docker?'Puerto Docker':project.name,
-    means:'Un campus de trabajo donde agentes, goals y estados se hacen visibles en pequeños talleres.',
-    hint:'Hover the workshop roof; click the observatory or a robot to open its conversation.',
+    title:docker?I18n.t('Puerto Docker'):project.name,
+    means:I18n.t('Un campus de trabajo donde agentes, goals y estados se hacen visibles en pequeños talleres.'),
+    hint:I18n.t('Hover the workshop roof; click the observatory or a robot to open its conversation.'),
     camera:{az:38,el:35.264,pad:1.06},still:4,tilt:1.6,
     build(o) {
       const D=o.D,p=o.pal,hot=[],robots=[],goals=[],records=agents;
@@ -140,7 +140,7 @@ function workshopFigure(project,index,agents,onPick,docker=false) {
       const phase=D.phase(t,22),distance=working?(phase<.5?D.inOut(phase*2):1-D.inOut((phase-.5)*2))*p.cartPath.length:0;
       D.place(p.cart,p.cartPath,distance);p.cart.position.y=.35;if(phase>=.5&&working)p.cart.rotation.y+=Math.PI;D.spin(p.wheels,distance,.22);
       if(ctx.pressed&&p.lastPress!==ctx.pressedAt){p.lastPress=ctx.pressedAt;if(ctx.pressed.userData.agentId)onPick(ctx.pressed.userData.agentId)}
-      ctx.read=working?'Campus · agentes trabajando':'Campus · '+p.records.length+' agentes';
+      ctx.read=working?I18n.t('Campus · agentes trabajando'):I18n.t('Campus · ')+p.records.length+I18n.t(' agentes');
     }
   });
 }
@@ -237,5 +237,5 @@ function tickPort(ctx,onPick) {
   const p=ctx.parts,D=ctx.D,t=ctx.t;p.boat.position.y=-.1+.04*D.wave(t,5.2);p.boat.rotation.z=.025*D.wave(t,6.7);
   p.armSpring.t=ctx.active===p.crane?.45:ctx.hover===p.crane?.15:0;p.armSpring.step(ctx.dt);p.arm.rotation.y=p.armSpring.x;
   if(ctx.pressed&&p.lastPress!==ctx.pressedAt){p.lastPress=ctx.pressedAt;onPick(ctx.pressed.userData.containerId || null)}
-  ctx.read='Puerto · '+p.records.length+' contenedores';
+  ctx.read=I18n.t('Puerto · ')+p.records.length+' contenedores';
 }

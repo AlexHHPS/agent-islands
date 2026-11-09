@@ -7,28 +7,28 @@ final class WorkspaceStore {
     init(_ root: URL) throws {
         try fm.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let file = root.appendingPathComponent("workspace.sqlite")
-        guard sqlite3_open_v2(file.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else { throw launchFailure("No se pudo abrir el registro de Islands.") }
+        guard sqlite3_open_v2(file.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else { throw launchFailure(L("No se pudo abrir el registro de Islands.")) }
         sqlite3_busy_timeout(db, 3000)
         var version: OpaquePointer?
         sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &version, nil)
         let existingVersion = sqlite3_step(version) == SQLITE_ROW ? sqlite3_column_int(version, 0) : 0
         sqlite3_finalize(version)
-        guard existingVersion <= 1 else { throw launchFailure("Este registro necesita una versión más reciente de Islands.") }
+        guard existingVersion <= 1 else { throw launchFailure(L("Este registro necesita una versión más reciente de Islands.")) }
         try execute("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, value TEXT NOT NULL, updated REAL NOT NULL, PRIMARY KEY(kind,id)); PRAGMA user_version=1;")
         try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
     }
     deinit { sqlite3_close(db) }
     private func execute(_ sql: String) throws {
-        guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw launchFailure("No se pudo guardar el registro de Islands.") }
+        guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw launchFailure(L("No se pudo guardar el registro de Islands.")) }
     }
     func put(_ kind: String, id: String, value: Any) throws {
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "INSERT INTO records VALUES (?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value,updated=excluded.updated", -1, &statement, nil) == SQLITE_OK else { throw launchFailure("Registro no disponible.") }
+        guard sqlite3_prepare_v2(db, "INSERT INTO records VALUES (?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value,updated=excluded.updated", -1, &statement, nil) == SQLITE_OK else { throw launchFailure(L("Registro no disponible.")) }
         defer { sqlite3_finalize(statement) }
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         sqlite3_bind_text(statement, 1, kind, -1, transient); sqlite3_bind_text(statement, 2, id, -1, transient)
         sqlite3_bind_text(statement, 3, json(value), -1, transient); sqlite3_bind_double(statement, 4, Date().timeIntervalSince1970)
-        guard sqlite3_step(statement) == SQLITE_DONE else { throw launchFailure("No se pudo guardar el registro.") }
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw launchFailure(L("No se pudo guardar el registro.")) }
     }
     func records(_ kind: String) -> [[String: Any]] {
         var statement: OpaquePointer?
@@ -68,7 +68,7 @@ struct HarnessProfile: Codable {
     var enabled: Bool = true
     var qaEnabled: Bool = true
     var maxDelegates: Int = 4
-    var policy: String = "Implementa el resultado acordado y compruébalo. Separa mejoras opcionales del trabajo necesario. Reutiliza decisiones autorizadas dentro de su alcance. Los pushes directos a main y staging necesitan consentimiento explícito. Nunca conviertas pruebas omitidas en una validación."
+    var policy: String = L("Implementa el resultado acordado y compruébalo. Separa mejoras opcionales del trabajo necesario. Reutiliza decisiones autorizadas dentro de su alcance. Los pushes directos a main y staging necesitan consentimiento explícito. Nunca conviertas pruebas omitidas en una validación.")
     func environment(_ base: [String: String]) -> [String: String] {
         var env = base
         // Authentication overrides from the parent terminal must not cross profiles.

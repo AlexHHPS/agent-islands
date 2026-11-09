@@ -16,5 +16,6 @@ for(const file of files){
 if(process.platform==='darwin')execFileSync('plutil',['-lint','native/Info.plist'],{stdio:'inherit'});
 const pkg=JSON.parse(readFileSync('package.json')),lock=JSON.parse(readFileSync('package-lock.json'));
 if(pkg.version!==lock.version||!readFileSync('native/Info.plist','utf8').includes('<string>'+pkg.version+'</string>')||!readFileSync('ui/index.html','utf8').includes('v'+pkg.version))throw Error('App/package version mismatch');
+execFileSync(process.execPath,['scripts/locales.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['scripts/asset-integrity.mjs'],{stdio:'inherit'});
 console.log('PASS syntax, local documentation links, version consistency and assets');

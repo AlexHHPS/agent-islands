@@ -5,7 +5,7 @@ import {chromium} from 'playwright';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 
-const model=runInNewContext(readFileSync('ui/agent-state.js','utf8')+';({agentControl,normalizedGoalStatus})');
+const model=runInNewContext(readFileSync('ui/agent-state.js','utf8')+';({agentControl,normalizedGoalStatus})',{I18n:{t:key=>key}});
 const base={id:'goal',projectId:'p',harness:'codex',name:'Objetivo del portal',mode:'goal',managed:true,processRunning:true,state:'waiting',goalUpdatedAt:100,goalObjective:'Reducir el abandono del acceso'};
 for(const [raw,status,attention] of [['stalled','blocked',true],['in_progress','active',false],['achieved','complete',false],['in-progress','active',false],[' IN PROGRESS ','active',false],['completed','complete',false],['paused','paused',false],['budget_limited','budget_limited',true],['usage_limited','usage_limited',true],['future_state','unknown',true]]){
  const a={...base,goalStatus:raw};assert.equal(model.normalizedGoalStatus(raw),status);assert.equal(model.agentControl(a).needsAttention,attention,raw);
