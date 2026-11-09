@@ -17,7 +17,7 @@
   <img src="docs/assets/workspace-light.png" alt="Agent Islands workspace: project islands with workshops, agent states and a contextual progress panel." width="100%">
 </picture>
 
-*Actual app UI with demonstration data. The current interface is in Spanish.*
+*Actual app UI with demonstration data. The app supports Spanish and English; screenshots show Spanish.*
 
 ## Why Agent Islands
 
@@ -87,6 +87,8 @@ dist/Agent Islands.dmg       Local installer image
 It downloads a pinned Node runtime, verifies its SHA-256 against [committed checksums](config/runtime.json), bundles Playwright and signs the app locally with an ad hoc signature. The DMG is **not notarized**. See [development](docs/DEVELOPMENT.md) for toolchain, validation and troubleshooting.
 
 ### First run
+
+Choose **Castellano** or **English** under the settings button → **Application language / Idioma de la aplicación**. Your choice is saved and applies immediately. The native app initially follows the Mac's preferred language, falling back to English.
 
 1. Add a project directory. Its island appears in the workspace.
 2. Start an agent with the **+** control; choose its harness, profile and directory.
@@ -178,6 +180,7 @@ GitHub Actions runs checks, builds and fixture tests on macOS. Inspect the [actu
 | [Development](docs/DEVELOPMENT.md) | Toolchain, commands, test isolation, known limitations |
 | [Architecture](docs/ARCHITECTURE.md) | Native bridge, harness integration, browser service, state handling |
 | [QA guide](docs/QA.md) | Environments, profiles, recipes, existing suites and MCP |
+| [Localization](docs/LOCALIZATION.md) | Shared catalogues, translation workflow and language behavior |
 | [Design](docs/DESIGN.md) | Identity, logo, tokens, accessible states and screenshot fixtures |
 | [Browser research](docs/BROWSER-RESEARCH.md) | Evaluation scope for alternative engines and automation layers |
 | [Releasing](docs/RELEASING.md) | Clean source archive, validation, signing and publication steps |
@@ -191,7 +194,7 @@ The project follows a [code of conduct](CODE_OF_CONDUCT.md) and a documented [go
 
 ### Current limits and next work
 
-- The UI is currently Spanish; localization is open work.
+- Spanish and English are supported throughout the app; additional locales are welcome. See [localization](docs/LOCALIZATION.md).
 - Conversation and goal adapters depend on evolving CLI data formats. Unknown data is treated conservatively; full parity between providers is not guaranteed.
 - macOS only. Intel support is a build path awaiting hardware validation.
 - Public release signing, notarization and distribution are pending.

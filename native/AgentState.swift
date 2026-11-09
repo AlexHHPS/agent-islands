@@ -61,7 +61,7 @@ extension Agent {
 }
 
 func agentStateSelfTests() {
-    var a = Agent(id: "state-test", projectId: "p", name: "Goal", harness: "codex", state: "waiting", managed: true, pid: 1)
+    var a = Agent(id: "state-test", projectId: "p", name: L("Goal"), harness: "codex", state: "waiting", managed: true, pid: 1)
     a.processRunning = true
     let samples = [("stalled", "blocked", true), ("in_progress", "observed", false), ("achieved", "complete", false), ("paused", "paused", false), ("future_status", "waiting", true)]
     for (raw, effective, attention) in samples {

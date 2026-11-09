@@ -36,14 +36,15 @@ extension AppDelegate {
             catch { emit("operationsResult", ["requestId": requestID, "method": method, "error": error.localizedDescription]) }; return
         }
         if method == "profile.health" || method == "profile.login" || method == "instructions.audit" { profileOperation(body, requestID: requestID, method: method); return }
-        guard let node = qaNode() else { emit("operationsResult", ["requestId": requestID, "method": method, "error": "Node no está instalado. Usa Preparar QA para instalar el runtime."]); return }
+        guard let node = qaNode() else { emit("operationsResult", ["requestId": requestID, "method": method, "error": L("Node no está instalado. Usa Preparar QA para instalar el runtime.")]); return }
         var params = body["params"] as? [String: Any] ?? [:]
+        params["language"] = AppLanguage.current
         if activeProjectWorkspace != nil { params["projectIds"] = scopedProjects.map { $0.id } } else { params.removeValue(forKey: "projectIds") }
         if method.hasPrefix("browser."), method != "browser.install" {
             do { params = try browserParameters(params) }
             catch { emit("operationsResult", ["requestId": requestID, "method": method, "error": error.localizedDescription]); return }
         }
-        if method == "environment.save", let projectID = params["projectId"] as? String, !scopedProjects.contains(where: { $0.id == projectID && $0.path == params["projectPath"] as? String }) { emit("operationsResult", ["requestId": requestID, "method": method, "error": "Selecciona un directorio de proyecto activo."]); return }
+        if method == "environment.save", let projectID = params["projectId"] as? String, !scopedProjects.contains(where: { $0.id == projectID && $0.path == params["projectPath"] as? String }) { emit("operationsResult", ["requestId": requestID, "method": method, "error": L("Selecciona un directorio de proyecto activo.")]); return }
         if qaClient == nil {
             var environment = ProcessInfo.processInfo.environment; environment["PATH"] = path
             qaClient = QAClient(node: node, script: qaScript(), root: support.appendingPathComponent("qa").path, environment: environment)
@@ -62,22 +63,22 @@ extension AppDelegate {
         let harness = value["harness"] as? String ?? "claude"
         guard ["codex", "claude"].contains(harness), let name = value["name"] as? String, !name.isEmpty,
               let root = value["configRoot"] as? String, root.hasPrefix("/"),
-              let executable = value["executable"] as? String, executable.hasPrefix("/"), fm.isExecutableFile(atPath: executable) else { throw launchFailure("Indica nombre, motor, configuración absoluta y un ejecutable instalado.") }
+              let executable = value["executable"] as? String, executable.hasPrefix("/"), fm.isExecutableFile(atPath: executable) else { throw launchFailure(L("Indica nombre, motor, configuración absoluta y un ejecutable instalado.")) }
         var directory: ObjCBool = false
-        guard fm.fileExists(atPath: root, isDirectory: &directory), directory.boolValue else { throw launchFailure("El directorio de configuración no existe.") }
+        guard fm.fileExists(atPath: root, isDirectory: &directory), directory.boolValue else { throw launchFailure(L("El directorio de configuración no existe.")) }
         let id = value["id"] as? String ?? UUID().uuidString
         let previous = profiles.first { $0.id == id }
-        if let previous { guard previous.harness == harness, previous.configRoot == root else { throw launchFailure("Crea otro perfil para cambiar de motor o identidad.") } }
+        if let previous { guard previous.harness == harness, previous.configRoot == root else { throw launchFailure(L("Crea otro perfil para cambiar de motor o identidad.")) } }
         let profile = HarnessProfile(id: id, name: String(name.prefix(80)), harness: harness, executable: executable, configRoot: root, defaultProfile: previous?.defaultProfile ?? false, enabled: value["enabled"] as? Bool ?? true, qaEnabled: value["qaEnabled"] as? Bool ?? true, maxDelegates: max(1, min(10, value["maxDelegates"] as? Int ?? 4)), policy: String((value["policy"] as? String ?? previous?.policy ?? HarnessProfile(id: "", name: "", harness: "", executable: "", configRoot: "").policy).prefix(6000)))
         profiles.removeAll { $0.id == id }; profiles.append(profile); persistProfiles()
     }
     func profileOperation(_ body: [String: Any], requestID: String, method: String) {
         let params = body["params"] as? [String: Any] ?? [:]
-        guard let id = params["profileId"] as? String, let profile = profiles.first(where: { $0.id == id }) else { emit("operationsResult", ["requestId": requestID, "method": method, "error": "Perfil no disponible."]); return }
+        guard let id = params["profileId"] as? String, let profile = profiles.first(where: { $0.id == id }) else { emit("operationsResult", ["requestId": requestID, "method": method, "error": L("Perfil no disponible.")]); return }
         if method == "profile.login" {
             do {
-                let project = projects.first ?? Project(id: "account", name: "Acceso", path: fm.homeDirectoryForCurrentUser.path)
-                let agent = try launch(project, harness: "shell", executable: profile.executable, args: profile.harness == "claude" ? ["auth", "login"] : ["login"], name: "Acceso · " + profile.name, profileID: id)
+                let project = projects.first ?? Project(id: "account", name: L("Acceso"), path: fm.homeDirectoryForCurrentUser.path)
+                let agent = try launch(project, harness: "shell", executable: profile.executable, args: profile.harness == "claude" ? ["auth", "login"] : ["login"], name: L("Acceso · ") + profile.name, profileID: id)
                 emit("select", ["id": agent]); emit("operationsResult", ["requestId": requestID, "method": method, "result": ["opened": true]])
             } catch { emit("operationsResult", ["requestId": requestID, "method": method, "error": error.localizedDescription]) }; return
         }
@@ -102,17 +103,17 @@ extension AppDelegate {
                     let bytes = output.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit(); timeout.cancel()
                     result["authenticated"] = process.terminationStatus == 0
                     if profile.harness == "claude", let auth = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any] {
-                        result["account"] = auth["email"] as? String ?? "Cuenta del perfil"
+                        result["account"] = auth["email"] as? String ?? L("Cuenta del perfil")
                         result["authMethod"] = auth["authMethod"] as? String ?? ""
                         result["effectiveConfigRoot"] = auth["configDirectory"] as? String ?? profile.configRoot
                     }
-                } catch { result["error"] = "No se pudo consultar el acceso del perfil." }
+                } catch { result["error"] = L("No se pudo consultar el acceso del perfil.") }
             }
             DispatchQueue.main.async { self.emit("operationsResult", ["requestId": requestID, "method": method, "result": result]) }
         }
     }
     func checkpointOperation(_ body: [String: Any]) throws {
-        guard let workspace else { throw launchFailure(workspaceError ?? "El registro no está disponible.") }
+        guard let workspace else { throw launchFailure(workspaceError ?? L("El registro no está disponible.")) }
         if let values = body["records"] as? [[String: Any]] {
             // One bounded idempotent import from the former WebView storage.
             for row in values.prefix(2000) {

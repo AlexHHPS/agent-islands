@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Dictate messages to your agents when you press the microphone.";
+"NSSpeechRecognitionUsageDescription" = "Convert your voice into messages you can review before sending.";

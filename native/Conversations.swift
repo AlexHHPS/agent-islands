@@ -17,13 +17,13 @@ func launchFailure(_ message: String) -> NSError {
 
 // Arguments remain separate argv entries. No prompt, path or session ID is evaluated by a shell.
 func harnessArguments(_ harness: String, base: [String], cwd: String, resume: String?, bypass: Bool, hooks: String?, notify: String?, remote: String? = nil, additionalDirectories: [String] = []) throws -> [String] {
-    if let resume, UUID(uuidString: resume) == nil { throw launchFailure("La conversación seleccionada no tiene un identificador válido.") }
-    guard !bypass || harness == "codex" || harness == "claude" else { throw launchFailure("Bypass está disponible para Codex y Claude Code.") }
-    if harness == "codex", resume != nil, remote != nil, bypass { throw launchFailure("Al reconectar al servidor de Codex se conservan los permisos existentes. Desactiva Bypass para continuar esta conversación.") }
+    if let resume, UUID(uuidString: resume) == nil { throw launchFailure(L("La conversación seleccionada no tiene un identificador válido.")) }
+    guard !bypass || harness == "codex" || harness == "claude" else { throw launchFailure(L("Bypass está disponible para Codex y Claude Code.")) }
+    if harness == "codex", resume != nil, remote != nil, bypass { throw launchFailure(L("Al reconectar al servidor de Codex se conservan los permisos existentes. Desactiva Bypass para continuar esta conversación.")) }
     var args = base
     if ["codex", "claude"].contains(harness) {
         let directories = Array(Set(additionalDirectories)).sorted()
-        for directory in directories { guard directory.hasPrefix("/"), !directory.contains("\0") else { throw launchFailure("El directorio adicional no es válido.") } }
+        for directory in directories { guard directory.hasPrefix("/"), !directory.contains("\0") else { throw launchFailure(L("El directorio adicional no es válido.")) } }
         if harness == "claude", !directories.isEmpty { args += ["--add-dir"] + directories }
         else { for directory in directories { args += ["--add-dir", directory] } }
     }
@@ -38,7 +38,7 @@ func harnessArguments(_ harness: String, base: [String], cwd: String, resume: St
         if let hooks { args += ["--settings", hooks] }
         if bypass { args += ["--dangerously-skip-permissions"] }
         if let resume { args += ["--resume", resume] }
-    } else if resume != nil { throw launchFailure("Este harness no ofrece un selector de conversaciones integrado.") }
+    } else if resume != nil { throw launchFailure(L("Este harness no ofrece un selector de conversaciones integrado.")) }
     return args
 }
 
@@ -73,7 +73,7 @@ func claudeConversation(_ url: URL) -> SavedConversation? {
     guard let cwd, FileManager.default.fileExists(atPath: cwd) else { return nil }
     let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)?.timeIntervalSince1970 ?? 0
     let rawTitle = title ?? firstPrompt ?? "Claude · " + String(url.deletingPathExtension().lastPathComponent.prefix(8))
-    let cleanTitle = String(rawTitle.split(whereSeparator: { $0.isNewline }).first ?? "Conversación de Claude")
+    let cleanTitle = (rawTitle.split(whereSeparator: { $0.isNewline }).first.map(String.init) ?? L("Conversación de Claude"))
     return SavedConversation(id: url.deletingPathExtension().lastPathComponent, harness: "claude", title: String(cleanTitle.prefix(180)), projectPath: cwd, updatedAt: modified)
 }
 

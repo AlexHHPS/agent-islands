@@ -19,7 +19,7 @@ try{
  await page.locator('#workspace-save').click();
  const scoped={...initial,projects:[projects[1],projects[0]],projectWorkspaces:[group],activeWorkspaceId:group.id,activeWorkspaceName:'Portal',agents:[initial.agents[0]],backgroundSessionCount:1};
  await page.evaluate(data=>{receiveNative({event:'snapshot',data});receiveNative({event:'workspaceResult',data:{success:true}})},scoped);
- assert(await page.locator('#workspace-dialog').isHidden());assert.equal(await page.locator('#workspace-select').inputValue(),group.id);assert.equal(await page.locator('#world .island').count(),2);assert(!(await page.locator('#team-list').textContent()).includes('Other agent'));assert((await page.locator('#workspace-background').textContent()).includes('1 sesiones'));
+ assert(await page.locator('#workspace-dialog').isHidden());assert.equal(await page.locator('#workspace-select').inputValue(),group.id);assert.equal(await page.locator('#world .island').count(),2);assert(!(await page.locator('#team-list').textContent()).includes('Other agent'));assert((await page.locator('#workspace-background').textContent()).includes('1 sesión'));
  await page.evaluate(()=>launchDialog());assert.deepEqual(await page.locator('#launch-project option').evaluateAll(els=>els.map(e=>e.value)),['web','api']);await page.locator('#launch-dialog .close-dialog').first().click();
  await page.evaluate(()=>selectAgent('a'));await page.locator('#prompt').fill('Conserva este encargo');
  await page.locator('#workspace-select').selectOption('');assert(await page.evaluate(()=>messages.some(m=>m.action==='workspaceActivate'&&m.workspaceId==='')));

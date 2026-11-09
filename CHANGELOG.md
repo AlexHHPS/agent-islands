@@ -2,7 +2,15 @@
 
 Changes are grouped by user-visible behavior. Versions before public distribution were local previews.
 
-## 0.11.0 — Unreleased
+## 0.12.0 — Unreleased
+
+- Add Spanish and English across the UI, native menus/dialogues, permission descriptions, browser/QA messages and generated agent guidance.
+- Add a persistent language selector under Help/settings that updates the UI without restarting agent sessions or discarding drafts and forms.
+- Share catalogues between JavaScript, Swift and Node, validate keys and interpolation placeholders, and generate the offline UI bundle.
+- Follow the selected language for dates, numbers, dictation, speech and optional summaries. Preserve user content, provider output and recorded evidence.
+- Isolate QA request locales across concurrent operations and update the private service protocol to version 4.
+
+## 0.11.0 — Initial public source
 
 - Adopt Apache-2.0 for the current revision, retain third-party notices and acknowledge permissions granted on earlier MIT revisions. Commercial contact is an optional invitation, not a license restriction.
 

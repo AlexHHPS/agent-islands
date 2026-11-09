@@ -41,6 +41,10 @@ Añade un directorio y crea un agente desde el **+** de su isla. El selector per
 
 Para el navegador, abre **QA y perfiles → Salud → Preparar QA** y registra un entorno. Puedes seleccionar componentes, capturar regiones o grabar recorridos. Las referencias se quedan en el borrador hasta pulsar **Enviar**. Su uso posterior depende del harness y del modelo.
 
+## Idioma
+
+Abre el botón de ajustes y elige **Castellano** o **English** en **Idioma de la aplicación**. Se aplica al instante y se guarda para las próximas aperturas. La aplicación nativa usa inicialmente el idioma del Mac, con inglés como alternativa. Los textos propios, menús, QA, fechas, dictado y resúmenes siguen esta preferencia; tus mensajes, borradores y conversaciones conservan su contenido.
+
 ## Datos y permisos
 
 El estado de la app se guarda en `~/Library/Application Support/Agent Islands/`. Los perfiles usan directorios de configuración separados. Las claves del servidor de resúmenes se guardan en el llavero; las actualizaciones automáticas empiezan desactivadas.
@@ -59,7 +63,7 @@ npm run test:native
 npm run check:source
 ```
 
-`npm test` necesita la aplicación compilada. Las pruebas usan fixtures; no envían prompts reales a proveedores. La interfaz está en español y el README principal y las guías técnicas están en inglés para facilitar contribuciones.
+`npm test` necesita la aplicación compilada. Las pruebas usan fixtures; no envían prompts reales a proveedores. La interfaz completa está disponible en castellano e inglés. El README principal y las guías técnicas están en inglés para facilitar contribuciones.
 
 Lee [CONTRIBUTING.md](CONTRIBUTING.md), el [código de conducta](CODE_OF_CONDUCT.md), las [reglas de gobierno](GOVERNANCE.md), [soporte](SUPPORT.md), [SECURITY.md](SECURITY.md) y el [changelog](CHANGELOG.md). Proyecto independiente bajo [Apache 2.0](LICENSE), con [licencias de terceros](THIRD_PARTY_NOTICES.md).
 

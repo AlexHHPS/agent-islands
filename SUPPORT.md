@@ -25,7 +25,7 @@ Use a minimal fixture where possible. Remove private prompts, credentials, cooki
 
 Agent Islands owns workspace organization, its native/UI bridge, conversation discovery adapters and controlled-browser/QA integration. Provider authentication, model access, billing and the CLI's own permission engine belong to the provider. Explain the observed boundary when reporting a problem; a reproduction directly in the CLI can help distinguish the two.
 
-See the [README's current limits](README.md#current-limits-and-next-work). Intel hardware validation, public binary notarization and localization remain open work. The app's optional summary server is configured separately from agent harness accounts.
+See the [README's current limits](README.md#current-limits-and-next-work). Intel hardware validation, public binary notarization and additional locales remain open work. Spanish and English are supported. The app's optional summary server is configured separately from agent harness accounts.
 
 ## Commercial use and collaboration
 

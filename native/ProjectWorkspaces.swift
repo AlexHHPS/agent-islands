@@ -28,13 +28,13 @@ extension AppDelegate {
         activeWorkspaceId = projectWorkspaces.contains { $0.id == saved } ? saved : nil
     }
     func saveProjectWorkspace(_ body: [String: Any]) throws {
-        guard let store = workspace else { throw launchFailure(workspaceError ?? "El registro no está disponible.") }
+        guard let store = workspace else { throw launchFailure(workspaceError ?? L("El registro no está disponible.")) }
         let name = (body["name"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let ids = body["projectIds"] as? [String] ?? []
         guard !name.isEmpty, name.count <= 80, !ids.isEmpty, ids.count <= 30, Set(ids).count == ids.count,
-              ids.allSatisfy({ id in projects.contains { $0.id == id } }) else { throw launchFailure("Escribe un nombre y elige entre 1 y 30 proyectos disponibles.") }
+              ids.allSatisfy({ id in projects.contains { $0.id == id } }) else { throw launchFailure(L("Escribe un nombre y elige entre 1 y 30 proyectos disponibles.")) }
         let id = body["id"] as? String ?? UUID().uuidString
-        guard UUID(uuidString: id) != nil else { throw launchFailure("El identificador del workspace no es válido.") }
+        guard UUID(uuidString: id) != nil else { throw launchFailure(L("El identificador del workspace no es válido.")) }
         let group = ProjectWorkspace(id: id, name: name, projectIds: ids)
         try store.put("projectWorkspace", id: id, value: try JSONSerialization.jsonObject(with: JSONEncoder().encode(group)))
         projectWorkspaces.removeAll { $0.id == id }; projectWorkspaces.append(group)
@@ -42,8 +42,8 @@ extension AppDelegate {
         else { publish() }
     }
     func activateProjectWorkspace(_ id: String?) throws {
-        guard id == nil || projectWorkspaces.contains(where: { $0.id == id }) else { throw launchFailure("Ese workspace ya no está disponible.") }
-        guard let store = workspace else { throw launchFailure("El registro no está disponible.") }
+        guard id == nil || projectWorkspaces.contains(where: { $0.id == id }) else { throw launchFailure(L("Ese workspace ya no está disponible.")) }
+        guard let store = workspace else { throw launchFailure(L("El registro no está disponible.")) }
         try store.put("preferences", id: "activeWorkspace", value: ["workspaceId": id ?? ""])
         activeWorkspaceId = id
         aiGeneration += 1; aiCredentialRequest = nil; aiTask?.cancel(); aiTask = nil
@@ -52,7 +52,7 @@ extension AppDelegate {
     }
     func workspaceExecutionContext(_ group: ProjectWorkspace?, projects roots: [Project]) -> String {
         guard let group else { return "" }
-        return "Workspace de ejecución: " + group.name + ". Proyectos incluidos:\n" + roots.map { "- " + $0.name + ": " + $0.path }.joined(separator: "\n") + "\nAcota el trabajo a estos proyectos. Coordina los cambios entre ellos y consulta las instrucciones de cada directorio. Este contexto no amplía permisos para despliegues ni pushes."
+        return L("Workspace de ejecución: ") + group.name + L(". Proyectos incluidos:\n") + roots.map { "- " + $0.name + ": " + $0.path }.joined(separator: "\n") + L("\nAcota el trabajo a estos proyectos. Coordina los cambios entre ellos y consulta las instrucciones de cada directorio. Este contexto no amplía permisos para despliegues ni pushes.")
     }
 }
 

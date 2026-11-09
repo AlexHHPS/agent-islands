@@ -2,12 +2,12 @@
   "ui/vendor/Figtree-OFL.txt": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268",
   "ui/vendor/JetBrains-Mono-OFL.txt": "b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d",
   "ui/vendor/addon-fit-LICENSE": "e256f01188af527e4d06d21d06fbf785ae9c50d4b328bf03cbe0ba7f0aa4228f",
-  "ui/vendor/addon-fit.js": "bdaefa370b1bfc42ee88d46fe6072400902a4d4b2d45cd93438dda9b23c97089",
+  "ui/vendor/addon-fit.js": "ba3ea256ce0620a0992a197d6c9baea64823fc93d8da07a9e366ca9943c18527",
   "ui/vendor/diorama-LICENSE": "e66dff0c36cd3903458d52771dec4d5341f55bd90ba0411e22652317e3463c89",
   "ui/vendor/diorama.js": "c448bdd45469e5e94bd32531a70884ebdbdb8ae5699d42b4f619427390dc53b3",
   "ui/vendor/figtree.woff2": "8330490a01c60c196eae00b823de8102275aaa5862e7b76a7af21b8745338928",
   "ui/vendor/mono.woff2": "d3dcdccdaba31643defe2317942155d4af3ee03951d058adbe8bc02b13e61b0a",
   "ui/vendor/xterm-LICENSE": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd",
-  "ui/vendor/xterm.css": "ba8e6985669488981ccf40c0cefe3aba80722cb6c92de7ad628b0bd717faf2b6",
-  "ui/vendor/xterm.js": "1f991ac3b4b283ebf96e60ae23a00a52765dd3a2e46fa6fdda9f1aab032f7495"
+  "ui/vendor/xterm.css": "854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6",
+  "ui/vendor/xterm.js": "14903579ff54664cd72f8e8699e6961a6272c21863ec1c3b118cdc8af5d4a972"
 }
