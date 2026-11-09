@@ -9,4 +9,4 @@ description = "Upstream xterm symbol assignment; vendor SHA-256 is checked separ
 condition = "AND"
 regexTarget = "match"
 paths = ['''(?:^|/)ui/vendor/xterm\.js$''']
-regexes = ['''^t\.FourKeyMap=t\.TwoKeyMap=void\s*(?:0[; ]?)?$''']
+regexes = ['''^t\.FourKeyMap=t\.TwoKeyMap=void\s*(?:0[; ]?)?$''', '''^t\.SequencerByKey=t\.Sequencer=t\.Throttler=void\s*(?:0[; ]?)?$''']
