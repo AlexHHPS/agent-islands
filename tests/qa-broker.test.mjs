@@ -13,7 +13,7 @@ const root=mkdtempSync(join(tmpdir(),'islands-broker-')),child=spawn(process.exe
 let next=0;const pending=new Map();createInterface({input:child.stdout}).on('line',line=>{const reply=JSON.parse(line),p=pending.get(reply.id);if(p){pending.delete(reply.id);reply.error?p.reject(Error(reply.error)):p.resolve(reply.result)}});
 const send=(method,params={})=>new Promise((resolve,reject)=>{const id=String(++next),timer=setTimeout(()=>{pending.delete(id);reject(Error('Broker timeout'))},20000);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});child.stdin.write(JSON.stringify({id,method,params})+'\n')});
 try{
- const results=await Promise.all(Array.from({length:12},()=>send('health')));assert(results.every(r=>r.protocolVersion===4));assert.equal(new Set(results.map(r=>r.executable)).size,1);
+ const results=await Promise.all(Array.from({length:12},()=>send('health')));assert(results.every(r=>r.protocolVersion===5));assert.equal(new Set(results.map(r=>r.executable)).size,1);
  const env=await send('environment.save',{name:'Fixture',origin:'https://example.test',projectId:'inside'});assert.equal(env.projectId,'inside');
  const values=await Promise.all([send('snapshot',{projectIds:['inside']}),send('snapshot',{projectIds:['outside']})]);assert.equal(values[0].environments.length,1);assert.equal(values[1].environments.length,0);
  await assert.rejects(send('missing.operation'),/desconocida/);

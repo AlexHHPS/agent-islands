@@ -30,6 +30,14 @@ final class WorkspaceStore {
         sqlite3_bind_text(statement, 3, json(value), -1, transient); sqlite3_bind_double(statement, 4, Date().timeIntervalSince1970)
         guard sqlite3_step(statement) == SQLITE_DONE else { throw launchFailure(L("No se pudo guardar el registro.")) }
     }
+    func delete(_ kind: String, id: String) throws {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM records WHERE kind=? AND id=?", -1, &statement, nil) == SQLITE_OK else { throw launchFailure(L("Registro no disponible.")) }
+        defer { sqlite3_finalize(statement) }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        sqlite3_bind_text(statement, 1, kind, -1, transient); sqlite3_bind_text(statement, 2, id, -1, transient)
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw launchFailure(L("No se pudo guardar el registro.")) }
+    }
     func records(_ kind: String) -> [[String: Any]] {
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(db, "SELECT id,value FROM records WHERE kind=? ORDER BY updated DESC", -1, &statement, nil) == SQLITE_OK else { return [] }
@@ -56,6 +64,11 @@ func workspaceSelfTests(_ temporary: URL) throws {
     precondition(env["ANTHROPIC_API_KEY"] == nil && env["OPENAI_API_KEY"] == nil && env["CLAUDECODE"] == nil && env["CODEX_HOME"] == nil)
     precondition(env["CLAUDE_CONFIG_DIR"] == temporary.path && env["PATH"] == "/bin")
     print("PASS: workspace restart persistence, profile-separated checkpoints and isolated authentication environment")
+}
+
+let storedAgentLimit = 100
+extension Agent {
+    var lastActivity: Double { max(stateAt ?? 0, taskAt ?? 0, responseAt ?? 0, contextAt ?? 0, goalUpdatedAt ?? 0) }
 }
 
 struct HarnessProfile: Codable {
@@ -85,8 +98,12 @@ extension AppDelegate {
         do {
             workspace = try WorkspaceStore(support)
             profiles = workspace?.records("profile").compactMap { try? JSONDecoder().decode(HarnessProfile.self, from: Data(json($0).utf8)) } ?? []
-            for row in workspace?.records("agent") ?? [] {
-                guard var agent = try? JSONDecoder().decode(Agent.self, from: Data(json(row).utf8)) else { continue }
+            // Closed sessions stay resumable from the provider history; the registry keeps the most recent ones.
+            let stored = (workspace?.records("agent") ?? []).compactMap { try? JSONDecoder().decode(Agent.self, from: Data(json($0).utf8)) }
+            let recent = stored.enumerated().sorted { $0.element.lastActivity != $1.element.lastActivity ? $0.element.lastActivity > $1.element.lastActivity : $0.offset < $1.offset }.map { $0.element }
+            for (index, stale) in recent.enumerated() {
+                if index >= storedAgentLimit { try? workspace?.delete("agent", id: stale.id); continue }
+                var agent = stale
                 agent.processRunning = false; agent.pid = 0; agent.state = "exited"; agents[agent.id] = agent
             }
         } catch { workspaceError = error.localizedDescription }

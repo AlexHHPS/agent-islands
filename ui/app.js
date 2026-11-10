@@ -88,7 +88,7 @@ window.receiveNative = ({event,data}) => {
     else{I18n.bind($('#launch-error'),"textContent",()=>data.message || I18n.t('No se pudo abrir el agente.'));$('#launch-error').hidden=false}
   }
   if(event === 'promptRejected'){
-    if(data.id===terminalTarget()){$('#prompt').value=data.text;draftContext={kind:data.contextKind,text:data.text};I18n.bind($('#composer-hint'),"textContent",()=>I18n.t('Borrador conservado · espera al final del turno'))}
+    if(data.id===terminalTarget()){const typed=$('#prompt').value.trim();$('#prompt').value=!typed||typed===data.text.trim()?data.text:data.text+'\n\n'+$('#prompt').value;persistDraft(data.id,$('#prompt').value);draftContext={kind:data.contextKind,text:data.text};I18n.bind($('#composer-hint'),"textContent",()=>I18n.t('Borrador conservado · espera al final del turno'))}
     toast(data.message);
   }
   if(event === 'select') selectAgent(data.id);
@@ -510,7 +510,7 @@ $('#stop-agent').onclick=()=>send('stop',{id:selected});$('#mic').onclick=toggle
 $$('.terminal-keys [data-key]').forEach(b=>b.onclick=()=>{const text=JSON.parse('"'+b.dataset.key+'"');send('input',{id:terminalTarget(),text})});
 $('#composer').onsubmit=submitComposer;
 $('#prompt').onkeydown=composerKeys;
-$('#prompt').oninput=renderComposerMenu;
+$('#prompt').oninput=()=>{renderComposerMenu();persistDraft(selected,$('#prompt').value)};
 $('#launch-harness').onchange=updateLaunchHarness;
 $('#launch-profile').onchange=()=>{updateBypassDescription();if($('#launch-mode').value==='resume')loadSavedSessions()};
 $('#launch-project').onchange=()=>chooseProjectSuggestion($('#launch-project').value);
@@ -701,11 +701,14 @@ setInterval(()=>{
  const fingerprint=JSON.stringify(pulseAgents().map(a=>[a.id,a.state,a.goalStatus,a.goalUpdatedAt,a.taskAt,a.responseAt]));
  if(fingerprint===aiLastFingerprint)return;aiLastFingerprint=fingerprint;requestIslandsAI(aiScope?'checkpoint':'status',aiScope);
 },15000);
+// Text drafts survive restarts; attachments stay in memory because their files are per session.
+function persistDraft(id,text){if(!id)return;try{text?.trim()?localStorage.setItem('islands.draft.'+id,text.slice(0,20000)):localStorage.removeItem('islands.draft.'+id)}catch{}}
+function storedDraft(id){try{return localStorage.getItem('islands.draft.'+id)||''}catch{return ''}}
 function switchComposerAgent(id){
  if(typeof composerDrafts==='undefined'||!composerDrafts)return;
  if(selected)composerDrafts.set(selected,{text:$('#prompt').value,attachments:composerAttachments});
  if(dictationAnchor){send('stopDictation');dictationAnchor=null}
- const draft=composerDrafts.get(id);$('#prompt').value=draft?.text || '';composerAttachments=draft?.attachments || [];renderAttachments();
+ const draft=composerDrafts.get(id);$('#prompt').value=draft?.text || storedDraft(id);composerAttachments=draft?.attachments || [];renderAttachments();
 }
 $('#composer').insertAdjacentHTML('afterbegin',ht('<div id="composer-menu" role="listbox" aria-label="Comandos y skills" hidden></div><div id="composer-attachments" aria-label="Imágenes adjuntas" hidden></div>'));
 $('#mic').insertAdjacentHTML('beforebegin',ht`<button id="attach-image" type="button" class="icon-button" title="Adjuntar imagen · también puedes pegar o arrastrar" aria-label="Adjuntar imagen">${icon('plus')}</button><button id="composer-skills" type="button" title="Skills y comandos" aria-label="Skills y comandos">/</button>`);
@@ -743,7 +746,7 @@ function submitComposer(e){
  if(!text.trim()&&!composerAttachments.length)return;
  if(!composerAttachments.length&&typeof submitQuestionText==='function'&&submitQuestionText(text)){$('#prompt').value='';renderComposerMenu();terminal?.focus();return}
  scrollTerminalToBottom();const requestId=crypto.randomUUID();if(typeof visualSendDrafts!=='undefined')visualSendDrafts.set(requestId,{owner:terminalTarget(),text,attachments:[...composerAttachments]});send('prompt',{requestId,id:terminalTarget(),text:text || I18n.t('Examina las referencias adjuntas.'),attachments:composerAttachments.filter(a=>!a.visual).map(a=>a.id),references:composerAttachments.filter(a=>a.visual).map(a=>a.id)});
- draftContext=null;$('#prompt').value='';composerAttachments=[];renderAttachments();renderComposerMenu();I18n.bind($('#composer-hint'),"textContent",()=>I18n.t('⌘↵ para enviar'));scrollTerminalToBottom();terminal?.focus();
+ draftContext=null;persistDraft(selected,'');$('#prompt').value='';composerAttachments=[];renderAttachments();renderComposerMenu();I18n.bind($('#composer-hint'),"textContent",()=>I18n.t('⌘↵ para enviar'));scrollTerminalToBottom();terminal?.focus();
 }
 function composerKeys(e){
  const options=composerOptions();

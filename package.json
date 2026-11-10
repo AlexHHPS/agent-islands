@@ -6,7 +6,7 @@
   "scripts": {
     "vendor": "node scripts/vendor.mjs",
     "build": "bash scripts/build.sh",
-    "test": "python3 tests/test_pty.py && node tests/ui.test.mjs && node tests/terminal-layout.test.mjs && node tests/interaction.test.mjs && node tests/pulse-questions.test.mjs && node tests/checkpoints.test.mjs && node tests/operations.test.mjs && node --disable-warning=ExperimentalWarning tests/qa.test.mjs && node --disable-warning=ExperimentalWarning tests/qa-mcp.test.mjs && node tests/workspaces.test.mjs && node --disable-warning=ExperimentalWarning tests/browser.test.mjs && node tests/browser-ui.test.mjs && node tests/agent-state.test.mjs && node --disable-warning=ExperimentalWarning tests/qa-broker.test.mjs && node tests/qa-client.test.mjs && node --disable-warning=ExperimentalWarning tests/localization.test.mjs",
+    "test": "python3 tests/test_pty.py && node tests/ui.test.mjs && node tests/terminal-layout.test.mjs && node tests/interaction.test.mjs && node tests/pulse-questions.test.mjs && node tests/checkpoints.test.mjs && node tests/operations.test.mjs && node --disable-warning=ExperimentalWarning tests/qa.test.mjs && node --disable-warning=ExperimentalWarning tests/qa-mcp.test.mjs && node tests/workspaces.test.mjs && node --disable-warning=ExperimentalWarning tests/browser.test.mjs && node --disable-warning=ExperimentalWarning tests/annotations.test.mjs && node tests/browser-ui.test.mjs && node tests/agent-state.test.mjs && node --disable-warning=ExperimentalWarning tests/qa-broker.test.mjs && node tests/qa-client.test.mjs && node --disable-warning=ExperimentalWarning tests/localization.test.mjs",
     "preview": "node scripts/serve-preview.mjs",
     "check": "node scripts/check.mjs",
     "test:native": "node scripts/test-native.mjs",

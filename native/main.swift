@@ -26,6 +26,8 @@ if let index = CommandLine.arguments.firstIndex(of: "--event"), CommandLine.argu
     try? fm.createDirectory(at: eventDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     let allowed: Set<String> = ["agent_id", "agent_type", "hook_event_name", "tool_name", "last_assistant_message", "last-assistant-message", "message", "thread-id", "session_id", "islands_mode"]
     var safePayload = (payload as? [String: Any] ?? [:]).filter { allowed.contains($0.key) }
+    // The app keeps at most 12,000 characters and discards oversized event files.
+    for (key, value) in safePayload { if let text = value as? String, text.count > 16_000 { safePayload[key] = String(text.prefix(16_000)) } }
     if safePayload["tool_name"] as? String == "AskUserQuestion", let input = (payload as? [String: Any])?["tool_input"] as? [String: Any], let questions = input["questions"] as? [[String: Any]] {
         safePayload["questions"] = questions.prefix(4).map { q -> [String: Any] in
             ["question": String((q["question"] as? String ?? "").prefix(1000)), "multiSelect": q["multiSelect"] as? Bool ?? false, "options": (q["options"] as? [[String: Any]] ?? []).prefix(8).map { ["label": String(($0["label"] as? String ?? "").prefix(300))] }]
@@ -270,12 +272,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var visualReferences: [String: [String: Any]] = [:]
     var visualWindows: [NSWindow] = []
     var hasUnsavedFile = false
+    var persistedAgents: [String: String] = [:]
+    var persistedRegistry = ""
     var isTest = CommandLine.arguments.contains("--smoke-test") || CommandLine.arguments.contains("--smoke-codex")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         signal(SIGPIPE, SIG_IGN)
         try? fm.createDirectory(at: support, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try? fm.createDirectory(at: eventDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        // The agent registry for QA is written before the service first starts.
+        try? fm.createDirectory(at: support.appendingPathComponent("qa", isDirectory: true), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        // Hooks from sessions that no longer exist are never consumed; drop the stale ones.
+        if let leftovers = try? fm.contentsOfDirectory(at: eventDirectory, includingPropertiesForKeys: [.contentModificationDateKey]) {
+            let limit = Date().addingTimeInterval(-3600)
+            for url in leftovers where url.pathExtension == "json" && ((try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) < limit { try? fm.removeItem(at: url) }
+        }
         if let bytes = try? Data(contentsOf: support.appendingPathComponent("projects.json")), let saved = try? JSONDecoder().decode([Project].self, from: bytes) { projects = saved }
         loadWorkspace()
         loadProjectWorkspaces()
@@ -554,11 +565,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func publish() {
         for id in Array(agents.keys) where agents[id]?.managed == true { agents[id]?.processRunning = sessions[id]?.process.isRunning == true }
         let data: [String: Any] = ["projects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(scopedProjects))) ?? [], "allProjects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projects))) ?? [], "projectWorkspaces": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projectWorkspaces))) ?? [], "activeWorkspaceId": activeWorkspaceId ?? "", "activeWorkspaceName": activeProjectWorkspace?.name ?? "", "backgroundSessionCount": agents.values.filter { $0.managed && !agentIsInScope($0) && sessions[$0.id]?.process.isRunning == true }.count, "agents": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(Array(agents.values).filter { agentIsInScope($0) }.sorted { $0.name < $1.name }))) ?? [], "binaries": binaries, "notifications": notifications, "voice": voice, "native": true, "docker": docker, "codexSharedServer": localCodexResumeEndpoint() != nil, "profiles": profiles.filter { $0.enabled }.map { profile -> [String: Any] in var row = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(profile))) as? [String: Any] ?? [:]; row["sharedServer"] = profile.harness == "codex" && localCodexResumeEndpoint(root: URL(fileURLWithPath: profile.configRoot)) != nil; return row }, "language": AppLanguage.current, "workspaceError": workspaceError ?? ""]
+        // Snapshots are frequent; write only the records that changed.
         if let workspace {
-            for agent in agents.values where agent.managed { try? workspace.put("agent", id: agent.id, value: (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(agent))) ?? [:]) }
+            for agent in agents.values where agent.managed {
+                guard let bytes = try? JSONEncoder().encode(agent), let value = try? JSONSerialization.jsonObject(with: bytes) else { continue }
+                let serialized = json(value)
+                if persistedAgents[agent.id] == serialized { continue }
+                if (try? workspace.put("agent", id: agent.id, value: value)) != nil { persistedAgents[agent.id] = serialized }
+            }
         }
-        let registry = agents.values.map { ["id": $0.id, "profileId": $0.profileId ?? $0.harness, "threadId": $0.threadId ?? "", "projectId": $0.projectId, "projectIds": $0.executionProjectIds as Any? ?? NSNull()] as [String: Any] }
-        try? Data(json(registry).utf8).write(to: support.appendingPathComponent("qa/agents.json"), options: .atomic)
+        let registry = agents.values.sorted { $0.id < $1.id }.map { ["id": $0.id, "profileId": $0.profileId ?? $0.harness, "threadId": $0.threadId ?? "", "projectId": $0.projectId, "projectIds": $0.executionProjectIds as Any? ?? NSNull()] as [String: Any] }
+        let serializedRegistry = json(registry)
+        if serializedRegistry != persistedRegistry, (try? Data(serializedRegistry.utf8).write(to: support.appendingPathComponent("qa/agents.json"), options: .atomic)) != nil { persistedRegistry = serializedRegistry }
         emit("snapshot", data)
         let n = agents.values.filter { agentIsInScope($0) && AgentControlState($0).needsAttention }.count
         statusItem?.button?.title = n > 0 ? " \(n)" : ""
@@ -615,7 +633,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "removeProject":
                 if let project {
                     guard !agents.values.contains(where: { $0.projectId == project.id && $0.managed && $0.state != "exited" }) else { self.message(L("Cierra primero las sesiones de esta isla.")); return }
-                    projects.removeAll { $0.id == project.id }; saveProjects(); publish()
+                    projects.removeAll { $0.id == project.id }; saveProjects()
+                    // Workspaces keep only projects that still exist; a later edit would otherwise be rejected.
+                    for group in projectWorkspaces where group.projectIds.contains(project.id) && group.projectIds.count > 1 {
+                        try? saveProjectWorkspace(["id": group.id, "name": group.name, "projectIds": group.projectIds.filter { $0 != project.id }, "activate": false])
+                    }
+                    publish()
                 }
             case "launch":
                 guard let harness = b["harness"] as? String else { throw launchFailure(L("Selecciona un harness.")) }
@@ -782,7 +805,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     let url = try confinedURL(root: project.path, relative: relative)
                     guard try revision(url) == expected else { self.message(L("El archivo cambió en disco. Recárgalo antes de guardar para conservar los cambios del agente.")); return }
                     guard text.utf8.count <= 2_000_000 else { self.message(L("El archivo supera el límite de 2 MB.")); return }
+                    let permissions = (try? fm.attributesOfItem(atPath: url.path))?[.posixPermissions]
                     try Data(text.utf8).write(to: url, options: .atomic)
+                    if let permissions { try? fm.setAttributes([.posixPermissions: permissions], ofItemAtPath: url.path) }
                     emit("saved", ["path": relative, "revision": try revision(url)] )
                 }
             case "reveal": if let project { NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: project.path) }
@@ -810,6 +835,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             }
             self.saveProjects()
             if !registrationOnly, var group = self.activeProjectWorkspace {
+                group.projectIds = group.projectIds.filter { id in self.projects.contains { $0.id == id } }
                 for url in panel.urls { if let project = self.projects.first(where: { $0.path == url.resolvingSymlinksInPath().path }), !group.projectIds.contains(project.id) { group.projectIds.append(project.id) } }
                 do { try self.saveProjectWorkspace(["id": group.id, "name": group.name, "projectIds": group.projectIds]) } catch { self.fail(error) }
             } else { self.publish() }
@@ -953,10 +979,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 let name = URL(fileURLWithPath: String(parts[2])).lastPathComponent.lowercased()
                 if known.contains(name), !String(parts[2]).contains(".app/Contents/MacOS/") { rows.append((pid, parent, name)) }
             }
-            let allParents = Dictionary(uniqueKeysWithValues: lines.compactMap { line -> (Int32, Int32)? in
+            let allParents = Dictionary(lines.compactMap { line -> (Int32, Int32)? in
                 let parts = line.split(maxSplits: 2, whereSeparator: { $0 == " " || $0 == "\t" })
                 guard parts.count >= 2, let pid = Int32(parts[0]), let parent = Int32(parts[1]) else { return nil }; return (pid, parent)
-            })
+            }, uniquingKeysWith: { first, _ in first })
             func isManaged(_ pid: Int32) -> Bool {
                 var p = pid
                 for _ in 0..<40 { if managed.contains(p) { return true }; guard let next = allParents[p], next != p else { break }; p = next }
@@ -1055,7 +1081,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let title = columns.contains("name") ? "COALESCE(name,title)" : "title"
         let archived = columns.contains("archived") ? " WHERE archived=0" : ""
         guard let threads = sqliteRowsResult(state, query: "SELECT id,cwd,\(title) AS title FROM threads\(archived)") else { return nil }
-        let byId = Dictionary(uniqueKeysWithValues: threads.compactMap { row -> (String, [String: String])? in guard let id = row["id"] else { return nil }; return (id, row) })
+        // Provider data is not ours to trust: a repeated id must not crash the app.
+        let byId = Dictionary(threads.compactMap { row -> (String, [String: String])? in guard let id = row["id"] else { return nil }; return (id, row) }, uniquingKeysWith: { first, _ in first })
         return goals.map { goal in
             var result = goal
             result["profileId"] = profileID ?? "codex"

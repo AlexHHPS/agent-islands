@@ -8,7 +8,7 @@ import Foundation
         var replies = 0, finished = false
         for _ in 0..<12 {
             client.request("health", params: [:]) { response in
-                guard let result = response["result"] as? [String: Any], result["protocolVersion"] as? Int == 4 else { print("FAIL native QA client: \(response)"); exit(1) }
+                guard let result = response["result"] as? [String: Any], result["protocolVersion"] as? Int == 5 else { print("FAIL native QA client: \(response)"); exit(1) }
                 replies += 1
                 if replies == 12 {
                     client.request("unknown", params: [:]) { response in

@@ -29,6 +29,7 @@ export class QAService {
   this.db.prepare('DELETE FROM leases WHERE expires<?').run(now());
  }
  all(kind){return this.db.prepare('SELECT value FROM records WHERE kind=? ORDER BY updated DESC LIMIT 1000').all(kind).map(r=>JSON.parse(r.value))}
+ remove(kind,id){this.db.prepare('DELETE FROM records WHERE kind=? AND id=?').run(kind,id)}
  get(kind,id){const r=this.db.prepare('SELECT value FROM records WHERE kind=? AND id=?').get(kind,id);return r?JSON.parse(r.value):null}
  put(kind,value){this.db.prepare('INSERT INTO records VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET value=excluded.value,updated=excluded.updated').run(kind,value.id,JSON.stringify(value),now());if(kind==='run'&&['blocked','failed','interrupted','stale'].includes(value.status)&&value.finishedAt){const id=hash(JSON.stringify([value.profileId,value.environmentId,value.status,value.message])),old=this.get('incident',id);if(old?.lastRunId!==value.id)this.put('incident',{id,profileId:value.profileId,environmentId:value.environmentId,message:value.message,status:value.status,count:(old?.count||0)+1,lastRunId:value.id,lastAt:now()})}return value}
  profiles(){try{return JSON.parse(readFileSync(join(this.root,'profiles.json'),'utf8')).filter(p=>p.enabled!==false)}catch{return []}}
@@ -51,7 +52,7 @@ export class QAService {
  }
  release(resource,owner){this.db.prepare('DELETE FROM leases WHERE resource=? AND owner=?').run(resource,owner);return {released:true}}
  environment(id){const env=this.get('environment',id);ensure(env,t('El entorno no está registrado.'));return env}
- async health(){let executable=null,available=false;try{const b=await this.browser();executable=b.executablePath();available=existsSync(executable)}catch{}return {protocolVersion:4,browserSessions:this.browsers.sessions.size,node:process.version,browserAvailable:available,executable,activeRuns:this.active.size,loginWindows:this.logins.size,checkedAt:now()}}
+ async health(){let executable=null,available=false;try{const b=await this.browser();executable=b.executablePath();available=existsSync(executable)}catch{}return {protocolVersion:5,browserSessions:this.browsers.sessions.size,node:process.version,browserAvailable:available,executable,activeRuns:this.active.size,loginWindows:this.logins.size,checkedAt:now()}}
  async install(){
   ensure(!this.installing,t('La instalación ya está en curso.'));this.installing=true;
   const id='chromium';this.put('installation',{id,status:'running',startedAt:now()});
@@ -88,9 +89,9 @@ export class QAService {
   this.profile(v.profileId);const env=this.environment(v.environmentId),id=randomUUID(),auth=this.authPath(v.profileId,env,v.account);
   ensure(this.logins.size<3,t('Ya hay tres ventanas de acceso abiertas.'));const browser=await (await this.browser()).launch(this.browserOptions(false));try{const context=await browser.newContext({...(existsSync(auth)?{storageState:auth}:{})});
   const page=await context.newPage();await page.goto(new URL(env.healthPath,env.origin).href,{timeout:30000,waitUntil:'domcontentloaded'});
-  const timer=setTimeout(()=>this.closeLogin(id),15*60*1000);timer.unref();this.logins.set(id,{id,profileId:v.profileId,environmentId:env.id,account:v.account||'default',auth,browser,context,page,timer});return {id,status:'awaiting_login',message:t('Completa el acceso y pulsa Guardar acceso.')};}catch(error){await browser.close();throw error}
+  const timer=setTimeout(()=>this.closeLogin(id),15*60*1000);timer.unref();this.logins.set(id,{id,profileId:v.profileId,environmentId:env.id,account:v.account||'default',auth,browser,context,page,timer});browser.once?.('disconnected',()=>{this.closeLogin(id).catch(()=>{})});return {id,status:'awaiting_login',message:t('Completa el acceso y pulsa Guardar acceso.')};}catch(error){await browser.close();throw error}
  }
- async closeLogin(id){for(const s of [...this.browsers.sessions.values()])if(s.loginId===id)await this.browsers.close(s.id);const login=this.logins.get(id);if(login){clearTimeout(login.timer);this.logins.delete(id);await login.browser.close()}return {closed:true}}
+ async closeLogin(id){for(const s of [...this.browsers.sessions.values()])if(s.loginId===id)await this.browsers.close(s.id).catch(()=>{});const login=this.logins.get(id);if(login){clearTimeout(login.timer);this.logins.delete(id);await login.browser.close().catch(()=>{})}return {closed:true}}
  async completeLogin(v){
   const l=this.logins.get(v.id);ensure(l,t('La ventana de acceso ya no está disponible.'));ensure(!v.profileId||v.profileId===l.profileId,t('El acceso pertenece a otro perfil.'));const env=this.environment(l.environmentId);
   ensure(new URL(l.page.url()).origin===env.origin,t('Termina el acceso en la aplicación antes de guardarlo.'));ensure(env.authSelector,t('Configura el elemento que confirma una sesión autenticada.'));
@@ -151,7 +152,7 @@ export class QAService {
   if(suite.grep)args.push('--grep',text(suite.grep,300));
   const storage=existsSync(auth)?auth:'';const vars={...executionEnvironment(),BASE_URL:env.origin,AGENT_ISLANDS_QA_STORAGE_STATE:storage,AGENT_ISLANDS_QA_PROFILE_DIR:join(this.root,'login-profiles',key(run.profileId,env.origin,run.account)),AGENT_ISLANDS_QA_EVIDENCE_DIR:directory,AGENT_ISLANDS_QA_RUN:run.id};
   let stdout='',stderr='';let code;
-  try{code=await new Promise((done,reject)=>{const child=spawn(process.execPath,args,{cwd:dirname(config),env:vars,stdio:['ignore','pipe','pipe']});control.child=child;child.stdout.on('data',d=>{if(stdout.length<8e6)stdout+=d});child.stderr.on('data',d=>{if(stderr.length<20000)stderr+=d});child.once('error',reject);child.once('exit',done)})}finally{control.child=null}
+  try{code=await new Promise((done,reject)=>{const child=spawn(process.execPath,args,{cwd:dirname(config),env:vars,stdio:['ignore','pipe','pipe']});control.child=child;child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8');child.stdout.on('data',d=>{if(stdout.length<8e6)stdout+=d});child.stderr.on('data',d=>{if(stderr.length<20000)stderr+=d});child.once('error',reject);child.once('exit',done)})}finally{control.child=null}
   let report;try{const start=stdout.indexOf('{');report=JSON.parse(stdout.slice(start))}catch{throw new Error(t('La suite no produjo un informe JSON válido. Comprueba sus dependencias y configuración.'))}
   const visit=suites=>{for(const s of suites||[]){for(const spec of s.specs||[])for(const test of spec.tests||[])run.checks.push({name:text(spec.title,200),status:test.status==='expected'?'passed':test.status==='skipped'?'skipped':'failed'});visit(s.suites)}};visit(report.suites);
   if(!run.checks.some(c=>c.status!=='skipped'))run.status='skipped';else if(code!==0&&!run.checks.some(c=>c.status==='failed'))run.checks.push({name:t('Finalización de la suite'),status:'failed'});
@@ -168,8 +169,10 @@ export class QAService {
    if(method.startsWith('lease.'))environmentId=String(v.resource||'').split(':')[1];
    if(environmentId){const env=this.environment(environmentId);ensure(v.projectIds.includes(env.projectId),t('El entorno está fuera del workspace de ejecución.'));}
    if(method==='environment.save')ensure(v.projectIds.includes(v.projectId),t('El proyecto está fuera del workspace.'));
+   if(method==='recipe.save'&&v.id){const previous=this.get('recipe',v.id),owner=previous&&this.get('environment',previous.environmentId);ensure(!owner||v.projectIds.includes(owner.projectId),t('El entorno está fuera del workspace de ejecución.'));}
   }
   if(method.startsWith('browser.')&&method!=='browser.install')return this.browsers.dispatch(method,v);
+  if(method.startsWith('annotation.'))return this.browsers.annotations.dispatch(method,v,'agent');
   if(method==='snapshot')return this.snapshot(v.profileId,v.projectIds);
   if(method==='health')return this.health();
   if(method==='browser.install')return this.install();
@@ -196,13 +199,24 @@ export class QAService {
  async close(){await this.browsers.dispose();for(const id of [...this.logins.keys()])await this.closeLogin(id);for(const [id] of this.active)await this.cancel(id);await Promise.all([...this.active.values()].map(a=>a.promise));this.db.close()}
 }
 
+// Annotation tools carry their own schemas: agents read, acknowledge, resolve and answer user feedback.
+const annotationTools={
+ 'annotation.list':()=>({description:t('Agent Islands: lista las anotaciones visuales que el usuario dejó en el navegador de esta conversación (comentario, intención, prioridad, selector, archivo de origen, componentes, capturas). Filtra por estado: pending, acknowledged, resolved, dismissed, proposed.'),inputSchema:{type:'object',properties:{status:{type:'array',items:{type:'string',enum:['pending','acknowledged','resolved','dismissed','proposed']}}},additionalProperties:false}}),
+ 'annotation.watch':()=>({description:t('Agent Islands: espera (hasta 100 s) a que el usuario envíe anotaciones nuevas o responda en un hilo, y las devuelve en lote. Úsalo en bucle para el modo manos libres.'),inputSchema:{type:'object',properties:{timeoutSeconds:{type:'number',minimum:1,maximum:100},batchWindowSeconds:{type:'number',minimum:0,maximum:20}},additionalProperties:false}}),
+ 'annotation.ack':()=>({description:t('Agent Islands: marca una anotación como vista antes de empezar a trabajar en ella; el usuario lo ve en su marcador.'),inputSchema:{type:'object',properties:{annotationId:{type:'string'},message:{type:'string'}},required:['annotationId'],additionalProperties:false}}),
+ 'annotation.resolve':()=>({description:t('Agent Islands: marca una anotación como resuelta con un resumen del cambio. Devuelve la ruta de una captura posterior del mismo elemento (files.after) para que verifiques el resultado y los archivos cambiados según git.'),inputSchema:{type:'object',properties:{annotationId:{type:'string'},summary:{type:'string'}},required:['annotationId','summary'],additionalProperties:false}}),
+ 'annotation.dismiss':()=>({description:t('Agent Islands: descarta una anotación explicando el motivo (por ejemplo, ya está hecho o contradice otra petición).'),inputSchema:{type:'object',properties:{annotationId:{type:'string'},reason:{type:'string'}},required:['annotationId','reason'],additionalProperties:false}}),
+ 'annotation.reply':()=>({description:t('Agent Islands: responde en el hilo de una anotación, por ejemplo para hacer una pregunta de aclaración. El usuario la ve junto al marcador.'),inputSchema:{type:'object',properties:{annotationId:{type:'string'},message:{type:'string'}},required:['annotationId','message'],additionalProperties:false}}),
+ 'annotation.suggest':()=>({description:t('Agent Islands: propone una anotación sobre un elemento visible del navegador abierto de esta conversación (modo crítica). El usuario la acepta o la descarta; no se aplica nada sin su visto bueno.'),inputSchema:{type:'object',properties:{selector:{type:'string'},comment:{type:'string'},intent:{type:'string',enum:['fix','change','question','approve']},severity:{type:'string',enum:['blocking','important','suggestion']}},required:['selector','comment'],additionalProperties:false}})
+};
+
 export function socketPath(root){return join(tmpdir(),'islands-qa-'+hash(existsSync(root)?realpathSync(root):resolve(root))+'.sock')}
 export async function call(root,method,params={}){
- return new Promise((done,reject)=>{const req=httpRequest({socketPath:socketPath(root),path:'/rpc',method:'POST',headers:{'Content-Type':'application/json'}},res=>{let data='';res.on('data',d=>data+=d);res.on('end',()=>{try{const result=JSON.parse(data);result.error?reject(new Error(result.error)):done(result.result)}catch(e){reject(e)}})});req.on('error',reject);req.setTimeout(120000,()=>req.destroy(new Error(t('La operación QA agotó su tiempo.'))));req.end(JSON.stringify({method,params:{language:language(),...params}}))})
+ return new Promise((done,reject)=>{const req=httpRequest({socketPath:socketPath(root),path:'/rpc',method:'POST',headers:{'Content-Type':'application/json'}},res=>{let data='';res.setEncoding('utf8');res.on('data',d=>data+=d);res.on('end',()=>{try{const result=JSON.parse(data);result.error?reject(new Error(result.error)):done(result.result)}catch(e){reject(e)}})});req.on('error',reject);req.setTimeout(120000,()=>req.destroy(new Error(t('La operación QA agotó su tiempo.'))));req.end(JSON.stringify({method,params:{language:language(),...params}}))})
 }
 async function ensureServer(root){
  let previous;try{previous=await call(root,'health')}catch{}
- if(previous?.protocolVersion===4)return;
+ if(previous?.protocolVersion===5)return;
  if(previous){
   const state=await call(root,'snapshot');ensure(!previous.activeRuns&&!previous.loginWindows&&!previous.browserSessions&&!state.installations?.some(i=>i.status==='running'),t('El servicio de QA anterior tiene operaciones activas. Termínalas antes de usar el workspace.'));
   await call(root,'shutdown');
@@ -222,7 +236,7 @@ async function main(){
   const write=value=>{output=output.then(()=>new Promise((resolve,reject)=>{process.stdout.write(JSON.stringify(value)+'\n',e=>e?reject(e):resolve())}));return output};
   const ready=()=>{if(!boot)boot=ensureServer(root).catch(e=>{boot=null;throw e});return boot};
   const handle=async line=>{let request;try{ensure(line.length<=2e6,t('La petición supera el límite.'));request=JSON.parse(line);ensure(typeof request.id==='string'&&typeof request.method==='string',t('Petición incompleta.'));await ready();let result;try{result=await call(root,request.method,request.params||{})}catch(e){if(!['ENOENT','ECONNREFUSED'].includes(e.code))throw e;boot=null;await ready();result=await call(root,request.method,request.params||{})}await write({id:request.id,result})}catch(e){await write({id:request?.id??null,error:safeError(e)})}};
-  for await(const line of input){lastInput=Date.now();ensure(pending.size<100,t('Demasiadas peticiones pendientes.'));const p=handle(line);pending.add(p);p.finally(()=>pending.delete(p))}
+  for await(const line of input){lastInput=Date.now();if(pending.size>=100){let id=null;try{id=JSON.parse(line).id??null}catch{}write({id,error:t('Demasiadas peticiones pendientes.')}).catch(()=>{});continue}const p=handle(line);pending.add(p);p.finally(()=>pending.delete(p))}
   await Promise.allSettled([...pending]);await output;clearInterval(idle);return;
  }
  if(argv.includes('--serve')){
@@ -233,8 +247,8 @@ async function main(){
   }
   writeFileSync(join(boot,'pid'),String(process.pid),{mode:0o600});
   const socket=socketPath(root);let service,lastRequest=Date.now();
-  const stop=async()=>{await service?.close();server.close(()=>{rmSync(boot,{recursive:true,force:true});process.exit(0)})};
-  const server=createServer(async(req,res)=>{lastRequest=Date.now();let raw='';req.on('data',d=>{raw+=d;if(raw.length>2e6)req.destroy()});req.on('end',async()=>{try{ensure(req.method==='POST'&&req.url==='/rpc',t('Petición no admitida.'));const {method,params}=JSON.parse(raw);if(method==='shutdown'){ensure(!service.active.size&&!service.logins.size&&!service.browsers.sessions.size,t('Hay operaciones activas.'));res.end(JSON.stringify({result:{stopped:true}}));setImmediate(stop);return}res.end(JSON.stringify({result:await service.dispatch(method,params)}))}catch(e){res.end(JSON.stringify({error:safeError(e)}))}})});
+  let stopping=false;const stop=async()=>{if(stopping)return;stopping=true;try{await service?.close()}catch{}server.close(()=>{rmSync(boot,{recursive:true,force:true});process.exit(0)})};
+  const server=createServer(async(req,res)=>{lastRequest=Date.now();let raw='';req.setEncoding('utf8');req.on('data',d=>{raw+=d;if(raw.length>2e6)req.destroy()});req.on('end',async()=>{try{ensure(req.method==='POST'&&req.url==='/rpc',t('Petición no admitida.'));const {method,params}=JSON.parse(raw);if(method==='shutdown'){ensure(!service.active.size&&!service.logins.size&&!service.browsers.sessions.size,t('Hay operaciones activas.'));res.end(JSON.stringify({result:{stopped:true}}));setImmediate(stop);return}res.end(JSON.stringify({result:await service.dispatch(method,params)}))}catch(e){res.end(JSON.stringify({error:safeError(e)}))}})});
   // Never unlink an active daemon's socket. The bind arbitrates concurrent starters.
   try{await call(root,'health');return}catch{}
   if(existsSync(socket))try{unlinkSync(socket)}catch{}
@@ -247,9 +261,10 @@ async function main(){
   const ownerIdentity=process.env.AGENT_ISLANDS_ID||randomUUID();
   const capturedProjects=argv.includes('--project-ids')?JSON.parse(argv[argv.indexOf('--project-ids')+1]):null;
   ensure(capturedProjects===null||Array.isArray(capturedProjects)&&capturedProjects.every(id=>typeof id==='string'),t('El alcance del workspace no es válido.'));
-  const names=['snapshot','health','run.start','run.get','run.cancel','run.retry','login.open','login.save','login.close','auth.check','lease.acquire','lease.release'];
-  const input=createInterface({input:process.stdin});for await(const line of input){let m;try{m=JSON.parse(line);if(m.id===undefined)continue;let result;if(m.method==='initialize')result={protocolVersion:m.params?.protocolVersion||'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'agent-islands-qa',version:'1.0.0'}};else if(m.method==='ping')result={};else if(m.method==='tools/list')result={tools:names.map(name=>({name:'islands_'+name.replaceAll('.','_'),description:t('Agent Islands QA: {0}. Comprobaciones y evidencias del navegador por perfil. Usa snapshot para encontrar los entornos y recorridos configurados. Una ejecución no implica autorización de despliegue.',name),inputSchema:{type:'object',properties:{environmentId:{type:'string'},recipeId:{type:'string'},id:{type:'string'},account:{type:'string'},resource:{type:'string'},owner:{type:'string'},seconds:{type:'number'},suite:{type:'object',properties:{config:{type:'string'},grep:{type:'string'}}}},additionalProperties:true}}))};else if(m.method==='tools/call'){await ensureServer(root);const name=names.find(n=>'islands_'+n.replaceAll('.','_')===m.params?.name);ensure(name,t('Herramienta desconocida.'));const args={...m.params.arguments,...(bound?{profileId:bound}:{})};
+  const names=['snapshot','health','run.start','run.get','run.cancel','run.retry','login.open','login.save','login.close','auth.check','lease.acquire','lease.release',...Object.keys(annotationTools)];
+  const input=createInterface({input:process.stdin});for await(const line of input){let m;try{m=JSON.parse(line);if(m.id===undefined)continue;let result;if(m.method==='initialize')result={protocolVersion:m.params?.protocolVersion||'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'agent-islands-qa',version:'1.0.0'}};else if(m.method==='ping')result={};else if(m.method==='tools/list')result={tools:names.map(name=>annotationTools[name]?{name:'islands_'+name.replaceAll('.','_'),...annotationTools[name]()}:({name:'islands_'+name.replaceAll('.','_'),description:t('Agent Islands QA: {0}. Comprobaciones y evidencias del navegador por perfil. Usa snapshot para encontrar los entornos y recorridos configurados. Una ejecución no implica autorización de despliegue.',name),inputSchema:{type:'object',properties:{environmentId:{type:'string'},recipeId:{type:'string'},id:{type:'string'},account:{type:'string'},resource:{type:'string'},owner:{type:'string'},seconds:{type:'number'},suite:{type:'object',properties:{config:{type:'string'},grep:{type:'string'}}}},additionalProperties:true}}))};else if(m.method==='tools/call'){await ensureServer(root);const name=names.find(n=>'islands_'+n.replaceAll('.','_')===m.params?.name);ensure(name,t('Herramienta desconocida.'));const args={...m.params.arguments,...(bound?{profileId:bound}:{})};
    if(bound){delete args.projectIds;if(capturedProjects)args.projectIds=capturedProjects;else try{const registry=JSON.parse(readFileSync(join(root,'agents.json'),'utf8')),agent=registry.find(a=>a.id===ownerIdentity&&a.profileId===bound);if(Array.isArray(agent?.projectIds))args.projectIds=agent.projectIds}catch{}}
+   if(name.startsWith('annotation.')){ensure(bound,t('Las anotaciones requieren un perfil de Agent Islands.'));args.agentId=ownerIdentity;delete args.role}
    if(bound&&name==='run.start'){
     args.agentId=ownerIdentity;delete args.threadId;delete args.reservationOwner;
     try{const registry=JSON.parse(readFileSync(join(root,'agents.json'),'utf8'));const agent=registry.find(a=>a.id===ownerIdentity&&a.profileId===bound);if(agent?.threadId)args.threadId=agent.threadId}catch{}
