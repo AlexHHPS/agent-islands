@@ -16,6 +16,44 @@ Open the controlled browser for the selected agent. Use component selection for 
 
 Recordings are bounded; they are not an indefinite screen recorder. They capture the controlled browser, not your entire desktop. Video, sampled frames and step context help the harness inspect the flow; video understanding depends on the model and tools available to it.
 
+## Open a local frontend
+
+The browser lists loopback dev servers that answer HTTP (common ports plus the port named in the project's `package.json` dev script) and offers one-click opening. A pasted address works too. Either way the origin is saved as an environment of the conversation's project.
+
+The page streams live while you browse. Selection tools pause the live view on a stable frame, so a pin or crop always matches what you saw. **Escritorio / Portátil / Tableta / Móvil** change the viewport; **Pausar animaciones** freezes CSS, Web Animations and media.
+
+## Annotate the page
+
+Press `A` and click an element (Shift + click adds several), `T` to drag over text, or `S` to mark an area. Each note gets a number, an intent (fix, change, question, approve) and a priority. Islands records the element's name, selector, classes, text, computed styles, accessibility, recent console or network errors and, when the dev server exposes it, the component chain and the source `file:line`:
+
+| Stack | What Islands reads |
+|---|---|
+| React 18 | `_debugSource` |
+| React 19 | the element's creation stack, mapped through the dev server's source maps |
+| Svelte 5 | `__svelte_meta` |
+| Vue 3 | the component's file |
+| Angular | component names |
+
+Positions from unmapped servers are marked approximate. Draft notes can **Ajustar estilo en vivo**: colour, background, size, padding and radius apply to the page immediately and travel to the agent as changes to persist in code.
+
+**Añadir al mensaje** turns the drafts into one reference in the composer, ordered by priority, at the chosen detail level (compact, standard or complete). Nothing reaches the agent until you press Enviar.
+
+Agents with QA enabled get annotation tools:
+
+| Tool | What it does |
+|---|---|
+| `islands_annotation_list` | Lists annotations |
+| `islands_annotation_watch` | Waits up to 100 s for new annotations or replies |
+| `islands_annotation_ack` | Marks an annotation as seen |
+| `islands_annotation_resolve` | Marks it done, re-captures the element when the page still shows that route, and records the files changed in git since sending |
+| `islands_annotation_dismiss` | Declines with a reason |
+| `islands_annotation_reply` | Answers in the annotation's thread |
+| `islands_annotation_suggest` | Proposes an annotation (critique mode) that you accept or discard |
+
+Each pin's colour and label show its state, and resolved notes offer a before/after comparison.
+
+During a recording, **Añadir nota** stores a timestamped note with its frame.
+
 ## Recipes
 
 Register a small journey using explicit selectors. A minimal example:

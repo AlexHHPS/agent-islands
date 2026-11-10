@@ -19,6 +19,8 @@ function connect(profile,owner,projects,language='es'){
 try{
  const a=connect('work'),b=connect('personal');assert.equal((await a('initialize',{protocolVersion:'2024-11-05'})).serverInfo.name,'agent-islands-qa');
  const tools=await a('tools/list');assert(tools.tools.some(t=>t.name==='islands_run_start'));assert(!tools.tools.some(t=>t.name.includes('environment_save')));
+ const resolveTool=tools.tools.find(t=>t.name==='islands_annotation_resolve');assert.deepEqual(resolveTool.inputSchema.required,['annotationId','summary']);assert(tools.tools.some(t=>t.name==='islands_annotation_watch'));
+ assert.deepEqual(JSON.parse((await a('tools/call',{name:'islands_annotation_list',arguments:{agentId:'someone-else'}})).content[0].text).annotations,[],'MCP binds annotations to its own conversation');
  const results=await Promise.all([a('tools/call',{name:'islands_health',arguments:{}}),b('tools/call',{name:'islands_health',arguments:{}})]);assert(results.every(r=>JSON.parse(r.content[0].text).browserAvailable));
  const snapshot=await a('tools/call',{name:'islands_snapshot',arguments:{profileId:'personal'}});assert(Array.isArray(JSON.parse(snapshot.content[0].text).runs));
  // The MCP binding overwrites supplied identities and namespaces resource ownership.

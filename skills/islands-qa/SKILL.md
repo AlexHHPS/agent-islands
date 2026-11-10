@@ -13,6 +13,8 @@ For an existing journey call `islands_run_start` with `environmentId`, `recipeId
 
 If access is missing, `islands_login_open` opens a visible browser. The user completes the identity provider's login, then `islands_login_save` stores this profile's state after checking the configured authenticated element. `islands_auth_check` verifies it before reuse. Do not claim headless automation can bypass SSO or MFA.
 
+When the user leaves visual annotations, read them with `islands_annotation_list` (or wait with `islands_annotation_watch` in hands-free mode). `islands_annotation_ack` each one before working on it. Then `islands_annotation_resolve` it with a short summary and open the returned `files.after` capture to check the result. Use `islands_annotation_reply` for clarifying questions and `islands_annotation_dismiss` with a reason when you will not act. `islands_annotation_suggest` only proposes; the user decides.
+
 Retrieve completion using `islands_run_get`; use bounded polling, and `islands_run_cancel` when cancelled. Failed or blocked runs can be retried with `islands_run_retry` after addressing the cause. Do not retry product failures indefinitely or change the requested acceptance criteria to get a pass.
 
 Keep these outcomes distinct: `passed`, `failed`, `blocked`, `skipped`, `cancelled`, `interrupted`, and `stale`. All skipped is not a pass. `revisionVerified=false` means the journey was checked but the deployed revision is unverified. A changed revision invalidates version-specific acceptance.

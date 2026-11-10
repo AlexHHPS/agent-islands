@@ -2,10 +2,10 @@
 <html lang="es" data-wide="fill" data-states="empty,loading,error">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Agent Islands</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="atelier.css"><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/xterm.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="pulse.css"><link rel="stylesheet" href="operations.css"><link rel="stylesheet" href="workspaces.css"><link rel="stylesheet" href="browser.css">
+  <link rel="stylesheet" href="atelier.css"><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="vendor/xterm.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="pulse.css"><link rel="stylesheet" href="operations.css"><link rel="stylesheet" href="workspaces.css"><link rel="stylesheet" href="browser.css"><link rel="stylesheet" href="annotations.css">
 </head>
 <body>
   <div id="app" data-slot="app-shell">
@@ -65,6 +65,6 @@
   <dialog id="search-dialog"><div class="dialog-heading"><div><span class="sheet-kicker">EN ESTE MAC</span><h2>Encuentra el hilo</h2></div><button class="close-dialog icon-button" aria-label="Cerrar">×</button></div><input id="agent-search" placeholder="Busca agentes, conversaciones o proyectos…" aria-label="Buscar en tu Mac" autocomplete="off"><p id="catalog-status" role="status"></p><div id="search-results"></div></dialog>
   <dialog id="project-dialog" class="project-dialog"><div class="dialog-heading"><div><span class="small-label">RETOMAR EL HILO</span><h2 id="brief-project-name"></h2></div><button class="close-dialog icon-button" aria-label="Cerrar">×</button></div><div id="project-brief"></div><div class="dialog-footer"><button id="project-files" title="Abrir el editor secundario">Archivos</button><button id="project-terminals" class="primary">Ver terminales ↗</button></div></dialog>
   <div id="toast" role="status" hidden></div>
-  <script src="locales.js"></script><script src="i18n.js"></script><script src="vendor/diorama.js"></script><script src="agent-state.js"></script><script src="workshop.js"></script><script src="vendor/xterm.js"></script><script src="vendor/addon-fit.js"></script><script src="app.js"></script><script src="questions.js"></script><script src="operations.js"></script><script src="workspaces.js"></script><script src="browser.js"></script>
+  <script src="locales.js"></script><script src="i18n.js"></script><script src="vendor/diorama.js"></script><script src="agent-state.js"></script><script src="workshop.js"></script><script src="vendor/xterm.js"></script><script src="vendor/addon-fit.js"></script><script src="app.js"></script><script src="questions.js"></script><script src="operations.js"></script><script src="workspaces.js"></script><script src="browser.js"></script><script src="annotations.js"></script>
 </body>
 </html>

@@ -151,7 +151,9 @@ extension AppDelegate {
         try png.write(to: url, options: .atomic); try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         attachments[id] = url
         // A small preview avoids transferring the original image back through the bridge.
-        let thumb = NSImage(size: NSSize(width: 120, height: 80)); thumb.lockFocus(); image.draw(in: NSRect(x: 0, y: 0, width: 120, height: 80)); thumb.unlockFocus()
+        let scale = min(120 / max(image.size.width, 1), 80 / max(image.size.height, 1))
+        let thumbSize = NSSize(width: max(1, image.size.width * scale), height: max(1, image.size.height * scale))
+        let thumb = NSImage(size: thumbSize); thumb.lockFocus(); image.draw(in: NSRect(origin: .zero, size: thumbSize)); thumb.unlockFocus()
         let preview = thumb.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:]) }
         emit("attachment", ["owner": owner, "id": id, "name": L("Imagen {0}", attachments.count), "preview": "data:image/png;base64," + (preview?.base64EncodedString() ?? "")])
     }

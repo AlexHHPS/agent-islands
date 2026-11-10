@@ -9,6 +9,23 @@ Changes are grouped by user-visible behavior. Versions before public distributio
 - Share catalogues between JavaScript, Swift and Node, validate keys and interpolation placeholders, and generate the offline UI bundle.
 - Follow the selected language for dates, numbers, dictation, speech and optional summaries. Preserve user content, provider output and recorded evidence.
 - Isolate QA request locales across concurrent operations and update the private service protocol to version 4.
+- Keep accented and other multibyte text intact in QA requests, responses and suite reports.
+- Keep the QA connection alive when too many requests are pending, release browser and login windows that crash or are closed by hand, and stop the QA service cleanly when asked twice.
+- Stop a workspace-scoped agent from replacing a journey that belongs to another workspace.
+- Keep the agent state when a harness reports a very long final message, and clear leftover hook events at launch.
+- Keep the 100 most recent closed sessions in the app registry; older conversations remain available from the provider history.
+- Write session records only when they change, preserve file permissions when saving from the editor, and keep workspaces consistent after removing a project.
+- Disallow inline scripts in the bundled interface.
+- Open a local frontend in one click: loopback dev servers and the project's dev-script port are detected, or paste an address.
+- Stream the controlled browser live; switch between desktop, laptop, tablet and mobile widths and pause animations.
+- Annotate elements, several elements, text or areas with numbered pins, intent and priority.
+- Annotations carry component chains and source `file:line` for React 18/19, Svelte, Vue and Angular, plus computed styles, accessibility and recent page errors.
+- Try colour, size and spacing changes live on the page and send them for the agent to persist.
+- Agents can list, watch, acknowledge, resolve, dismiss, reply to and propose annotations through MCP. Resolving re-captures the element for a before/after comparison and records the files changed in git.
+- Add timestamped notes during recordings.
+- Resize the terminal beside the browser. The browser steps aside for the terminal deck or the expanded terminal.
+- Keep text drafts across restarts, and keep text typed while a prompt was being rejected.
+- Delete visual evidence and annotations after 30 days; `AGENT_ISLANDS_RETENTION_DAYS` changes the window. The private QA protocol is now version 5.
 
 ## 0.11.0 — Initial public source
 

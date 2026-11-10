@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
             if (n > 0) { sent += (size_t)n; if (sent == queued) { sent = queued = 0; } }
             else if (n < 0 && errno != EINTR && errno != EAGAIN) break;
         }
-        if (fds[0].revents & (POLLIN | POLLHUP)) {
+        if (fds[0].revents & (POLLIN | POLLHUP | POLLERR | POLLNVAL)) {
             ssize_t n = read(STDIN_FILENO, input + have, sizeof input - have);
             if (n <= 0) break; have += n;
             while (have >= 5) {
