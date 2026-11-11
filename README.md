@@ -32,7 +32,7 @@ Use the familiar CLI harnesses in real terminals. Return to a conversation from 
 | **Several projects at once** | Named workspaces group directories, choose a primary project and scope the visible context. Running sessions keep their original roots. |
 | **New or saved conversations** | Choose an active directory, add a new one, or restore the directory from a saved conversation. Search across the configured profiles. |
 | **Separate accounts** | Configure multiple Codex and Claude Code profiles, including a `claude-personal` profile with its own configuration directory. |
-| **Real agent terminals** | Native PTYs, xterm rendering, a terminal board and an inspector alongside the project island. |
+| **Real agent terminals** | Native PTYs, xterm rendering and a terminal board with persistent pins. Working context and checkpoints fill the canvas beside the inspector. |
 | **Progress when you return** | Conversation checkpoints record the last consultation, a progress summary and product-level changes. Optional AI summaries show their source and time. |
 | **Goals with explicit states** | Working, blocked, paused and complete are distinct. `stalled` maps to blocked; `in_progress` to active; `achieved` to complete. Token usage is a budget, not a completion percentage. |
 | **Point to a visual change** | Control a Chromium page in the app, select a component or crop a region, and add the reference to your draft. |
@@ -45,7 +45,7 @@ Use the familiar CLI harnesses in real terminals. Return to a conversation from 
 ![Browser selection attached to an agent draft alongside its terminal.](docs/assets/browser-reference.png)
 
 1. Register an environment under **QA y perfiles → Entornos**.
-2. Open its browser from an agent and complete sign-in if needed.
+2. Open a public or local address from an agent, or bring an existing controllable Chromium tab with its signed-in session.
 3. Select a component, capture a region, or record the flow.
 4. Write the requested change and press **Enviar**.
 
@@ -94,7 +94,7 @@ Choose **Castellano** or **English** under the settings button → **Application
 2. Start an agent with the **+** control; choose its harness, profile and directory.
 3. To return to earlier work, choose a saved conversation in the launch dialog.
 4. Use **Workspaces** to group related projects and select the primary directory.
-5. For browser features, open **QA y perfiles → Salud → Preparar QA** to download Chromium, then register an environment.
+5. For browser features, open **QA y perfiles → Salud → Preparar QA** to download Chromium, then open a web address or bring an existing tab. Saved environments and local servers are optional shortcuts.
 
 For UI exploration without the native backend:
 

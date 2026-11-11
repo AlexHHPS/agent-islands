@@ -18,7 +18,15 @@ Recordings are bounded; they are not an indefinite screen recorder. They capture
 
 ## Open a local frontend
 
-The browser lists loopback dev servers that answer HTTP (common ports plus the port named in the project's `package.json` dev script) and offers one-click opening. A pasted address works too. Either way the origin is saved as an environment of the conversation's project.
+Start with a public or local HTTP(S) address in **Web address / Dirección web**. Its path, query and fragment are used for the initial navigation; only the origin and path are saved as environment metadata. **Open to sign in / Abrir para iniciar sesión** opens a real Chromium window for SSO/MFA. Finish signing in, refresh the tab list and choose the exact tab to bring into the visual browser.
+
+**Bring an open tab / Traer una pestaña abierta** also lists locally controllable Chromium browsers, including browsers opened by development and deployed-environment workflows. Discovery checks browser-owned listening ports, including dynamic ports. If a compatible browser is not detected, expand **Browser not listed?** and enter its local HTTP or WebSocket control endpoint. The product URL can be any internet HTTP(S) address; the control endpoint must be local.
+
+Selecting a tab attaches the original live page and its existing authentication context, including session storage. It does not copy cookies into another profile. Captures, annotations and recordings work on that page; closing the controlled view disconnects it and leaves the external tab and browser open. Only the selected tab and its popups are controlled. Tab capabilities are short lived and bound to the selected conversation, harness profile and workspace. Picker URLs omit query and fragment values.
+
+A browser without a Chromium control endpoint cannot be imported directly. Open the product address and sign in in the app-managed window instead; this creates a separate browser session. Do not expect an ordinary pasted URL to carry an existing browser's SSO session. The external connection uses [Playwright's Chromium CDP connection](https://playwright.dev/docs/api/class-browsertype#browser-type-connect-over-cdp).
+
+Local server discovery remains under **Local servers / Servidores locales**. It offers loopback dev servers as a secondary shortcut; a running localhost frontend is not required.
 
 The page streams live while you browse. Selection tools pause the live view on a stable frame, so a pin or crop always matches what you saw. **Escritorio / Portátil / Tableta / Móvil** change the viewport; **Pausar animaciones** freezes CSS, Web Animations and media.
 

@@ -67,3 +67,10 @@
 .checkpoint-history .checkpoint-entry{margin:var(--space-2) 0 var(--space-3);border-left-color:var(--border)}
 .checkpoint-empty h3{font-size:var(--text-base);font-weight:500}.checkpoint-empty p{font-size:var(--text-sm);line-height:var(--leading-body);max-width:var(--measure);margin-top:var(--space-2)}
 @media(max-width:800px){#agent-checkpoints{margin-inline:var(--space-3);padding:var(--space-4);max-height:36rem}.checkpoint-heading{align-items:flex-start;flex-wrap:wrap}.agent-focused #world .scene{height:16rem!important}.agent-focused #world-view{min-height:38rem}.agent-focused #world{min-height:0}.checkpoint-heading h2{font-size:var(--text-base)}}
+
+/* Working context takes the canvas. The project overview retains its islands. */
+.agent-focused #world-view,#world-view:has(#situation-body:not([hidden])):has(#pulse-details:not(:empty)){min-height:0;overflow:auto;overscroll-behavior:contain}
+.agent-focused #world,#world-view:has(#situation-body:not([hidden])):has(#pulse-details:not(:empty)) #world{display:none}
+.agent-focused .world-footer,#world-view:has(#situation-body:not([hidden])):has(#pulse-details:not(:empty)) .world-footer{display:none}
+.agent-focused #situation-body,#world-view:has(#situation-body:not([hidden])):has(#pulse-details:not(:empty)) #situation-body{max-height:none;overflow:visible}
+.agent-focused #agent-checkpoints{flex:1 0 auto;min-height:18rem;max-height:none;overflow:visible}

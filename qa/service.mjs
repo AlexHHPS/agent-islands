@@ -52,7 +52,7 @@ export class QAService {
  }
  release(resource,owner){this.db.prepare('DELETE FROM leases WHERE resource=? AND owner=?').run(resource,owner);return {released:true}}
  environment(id){const env=this.get('environment',id);ensure(env,t('El entorno no está registrado.'));return env}
- async health(){let executable=null,available=false;try{const b=await this.browser();executable=b.executablePath();available=existsSync(executable)}catch{}return {protocolVersion:5,browserSessions:this.browsers.sessions.size,node:process.version,browserAvailable:available,executable,activeRuns:this.active.size,loginWindows:this.logins.size,checkedAt:now()}}
+ async health(){let executable=null,available=false;try{const b=await this.browser();executable=b.executablePath();available=existsSync(executable)}catch{}return {protocolVersion:6,browserSessions:this.browsers.sessions.size,node:process.version,browserAvailable:available,executable,activeRuns:this.active.size,loginWindows:this.logins.size,checkedAt:now()}}
  async install(){
   ensure(!this.installing,t('La instalación ya está en curso.'));this.installing=true;
   const id='chromium';this.put('installation',{id,status:'running',startedAt:now()});
@@ -87,8 +87,9 @@ export class QAService {
  }
  async login(v){
   this.profile(v.profileId);const env=this.environment(v.environmentId),id=randomUUID(),auth=this.authPath(v.profileId,env,v.account);
+  let target;try{target=new URL(v.url||new URL(env.healthPath,env.origin).href)}catch{throw Error(t('Usa una dirección HTTP o HTTPS.'))}ensure(target.origin===env.origin&&['http:','https:'].includes(target.protocol)&&!target.username&&!target.password,t('Usa una dirección HTTP o HTTPS.'));
   ensure(this.logins.size<3,t('Ya hay tres ventanas de acceso abiertas.'));const browser=await (await this.browser()).launch(this.browserOptions(false));try{const context=await browser.newContext({...(existsSync(auth)?{storageState:auth}:{})});
-  const page=await context.newPage();await page.goto(new URL(env.healthPath,env.origin).href,{timeout:30000,waitUntil:'domcontentloaded'});
+  const page=await context.newPage();await page.goto(target.href,{timeout:30000,waitUntil:'domcontentloaded'});
   const timer=setTimeout(()=>this.closeLogin(id),15*60*1000);timer.unref();this.logins.set(id,{id,profileId:v.profileId,environmentId:env.id,account:v.account||'default',auth,browser,context,page,timer});browser.once?.('disconnected',()=>{this.closeLogin(id).catch(()=>{})});return {id,status:'awaiting_login',message:t('Completa el acceso y pulsa Guardar acceso.')};}catch(error){await browser.close();throw error}
  }
  async closeLogin(id){for(const s of [...this.browsers.sessions.values()])if(s.loginId===id)await this.browsers.close(s.id).catch(()=>{});const login=this.logins.get(id);if(login){clearTimeout(login.timer);this.logins.delete(id);await login.browser.close().catch(()=>{})}return {closed:true}}
@@ -216,7 +217,7 @@ export async function call(root,method,params={}){
 }
 async function ensureServer(root){
  let previous;try{previous=await call(root,'health')}catch{}
- if(previous?.protocolVersion===5)return;
+ if(previous?.protocolVersion===6)return;
  if(previous){
   const state=await call(root,'snapshot');ensure(!previous.activeRuns&&!previous.loginWindows&&!previous.browserSessions&&!state.installations?.some(i=>i.status==='running'),t('El servicio de QA anterior tiene operaciones activas. Termínalas antes de usar el workspace.'));
   await call(root,'shutdown');

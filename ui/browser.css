@@ -28,10 +28,25 @@
 /* Setup: detected dev servers first, a pasted address second, saved environments folded. */
 #browser-setup{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:var(--space-4);padding:var(--space-12) var(--space-6);background-image:radial-gradient(var(--canvas-dot) .65px,transparent .65px);background-size:22px 22px}
 #browser-setup[hidden]{display:none}
-#browser-setup>*{width:min(100%,var(--container-narrow))}
+#browser-setup>*{width:min(100%,var(--container-narrow));flex-shrink:0}
 .browser-quick{display:flex;flex-direction:column;gap:var(--space-4);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-6);box-shadow:var(--shadow-sm)}
-.browser-quick h3{font-size:var(--text-xl);font-family:var(--font-display);letter-spacing:var(--font-display-tracking)}
-.browser-quick-lead{font-size:var(--text-sm);color:var(--muted-foreground);max-width:var(--measure)}
+.browser-quick h3{margin:0;font-size:var(--text-xl);font-family:var(--font-display);letter-spacing:var(--font-display-tracking)}
+.browser-quick-lead{margin:0;font-size:var(--text-sm);color:var(--muted-foreground);max-width:var(--measure)}
+.browser-local label,.browser-connect-details label{display:block;font-size:var(--text-xs);margin-bottom:var(--space-2)}
+.browser-sign-in{margin-top:var(--space-2);padding-inline:0;color:var(--foreground);font-size:var(--text-sm);min-height:44px}
+.browser-open-tabs{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5)}
+.browser-tabs-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-3)}
+.browser-tabs-heading h3{margin:0;font-size:var(--text-base);font-weight:600}
+#browser-tabs-refresh{font-size:var(--text-xs);min-height:44px;border:1px solid var(--border);border-radius:var(--radius-full)}
+#browser-open-tabs{display:grid;gap:var(--space-1)}
+.browser-tab-choice{display:flex;align-items:center;gap:var(--space-3);width:100%;min-height:44px;text-align:left;border-radius:var(--radius-sm)}
+.browser-tab-choice>div{flex:1;min-width:0}.browser-tab-choice strong,.browser-tab-choice small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.browser-tab-choice strong{font-size:var(--text-sm);font-weight:500}.browser-tab-choice small{font-size:var(--text-xs);color:var(--muted-foreground);margin-top:var(--space-1)}
+.browser-tab-choice>span{display:flex;color:var(--primary)}
+.browser-connect-details{margin-top:var(--space-4);border-top:1px solid var(--border);padding-top:var(--space-2)}
+.browser-connect-details summary{min-height:44px;cursor:pointer;font-size:var(--text-sm);padding-block:var(--space-2)}
+.browser-connect-details p{font-size:var(--text-sm);color:var(--muted-foreground);max-width:var(--measure);margin-bottom:var(--space-3)}
+.browser-connect-details button{font-size:var(--text-xs);border:1px solid var(--border);min-height:44px}
 .browser-detected{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--space-24) * 2),1fr));gap:var(--space-2)}
 .browser-server{position:relative;display:grid;gap:var(--space-1);text-align:left;padding:var(--space-3) var(--space-4) var(--space-3) var(--space-8);border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--background);min-height:var(--space-16);transition:border-color var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out)}
 .browser-server:hover,.browser-server:focus-visible{border-color:var(--primary);background:var(--background);transform:translateY(-1px)}
@@ -50,6 +65,7 @@
 .browser-saved label{font-size:var(--text-xs);color:var(--muted-foreground)}
 #browser-environment{width:100%;min-height:var(--space-10)}
 .browser-setup-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.browser-setup-actions button.primary:disabled{opacity:1;color:var(--muted-foreground);background:var(--muted)}
 .browser-setup-actions button:not(.primary){border:1px solid var(--border)}
 #browser-sessions,#browser-logins{display:flex;gap:var(--space-2);flex-wrap:wrap}
 #browser-sessions:empty{display:none}
@@ -173,5 +189,5 @@ body.browser-visible .inspector.has-agent{--panel-width:calc(var(--space-24) * 4
 @keyframes badge-pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
 @keyframes bw-pulse{50%{opacity:.35}}
 @container browser-pane (max-width: 720px){#browser-viewport,#browser-tabs{display:none}}
-@media(max-width:800px){#browser-pane{position:relative;min-height:calc(var(--space-16) * 8)}body.browser-visible #world-view,body.browser-visible #terminals-view{display:none!important}body.browser-visible #browser-splitter{display:none}#open-browser{min-height:var(--space-10)}}
+@media(max-width:800px){#browser-pane{position:relative;min-height:calc(var(--space-16) * 8)}body.browser-visible #world-view,body.browser-visible #terminals-view{display:none!important}body.browser-visible #browser-splitter{display:none}#open-browser{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.browser-server,#browser-splitter::after,.dock-button,.bw-switch,.bw-switch::after{transition:none}#browser-selection,.bw-hover,.bw-toast,.bw-panel,.bw-dock .dock-tools>*,.dock-badge,.bw-recording::before{animation:none}.dock-button::before{transition:none}}

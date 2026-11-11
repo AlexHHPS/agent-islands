@@ -11,7 +11,7 @@
 - Agrupar varios proyectos en un workspace y acotar el contexto visible.
 - Abrir conversaciones nuevas o recuperar las guardadas junto a su directorio original.
 - Usar perfiles separados, incluido `claude-personal`, con sus propias configuraciones.
-- Trabajar con terminales reales y consultar checkpoints de progreso por conversación.
+- Trabajar con terminales reales, anclar las prioritarias arriba y consultar checkpoints de progreso por conversación.
 - Distinguir goals activos, bloqueados, pausados y completados sin confundir presupuesto con avance.
 - Controlar un navegador Chromium, seleccionar un componente o una región y añadirlo al borrador del chat.
 - Grabar un recorrido y enviar vídeo, fotogramas y pasos como referencia para un cambio.
@@ -39,7 +39,7 @@ La compilación genera la aplicación y `dist/Agent Islands.dmg` para la arquite
 
 Añade un directorio y crea un agente desde el **+** de su isla. El selector permite elegir un directorio activo, uno nuevo o recuperar el de una conversación anterior. En **Workspaces** puedes agrupar proyectos y elegir uno principal.
 
-Para el navegador, abre **QA y perfiles → Salud → Preparar QA** y registra un entorno. Puedes seleccionar componentes, capturar regiones o grabar recorridos. Las referencias se quedan en el borrador hasta pulsar **Enviar**. Su uso posterior depende del harness y del modelo.
+Para el navegador, abre **QA y perfiles → Salud → Preparar QA** y abre una URL pública o local, o trae una pestaña existente de un Chromium compatible conservando su acceso SSO. Puedes seleccionar componentes, capturar regiones o grabar recorridos. Las referencias se quedan en el borrador hasta pulsar **Enviar**. Su uso posterior depende del harness y del modelo.
 
 ## Idioma
 

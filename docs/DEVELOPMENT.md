@@ -65,3 +65,5 @@ Use `npm ci` to reproduce the lockfile. The vendor script refreshes xterm assets
 ## CI
 
 The workflow uses read-only repository permissions, pinned action commits, a pinned Node version and fixture tests. It does not sign a public release, publish evidence or access provider accounts. Hosted CI status must be checked in the actual repository after publication. Action and npm updates are proposed by Dependabot.
+
+Browser tab integration is covered by `tests/browser-tabs.test.mjs`: it launches a fixture Chromium on a dynamic control port, keeps session storage and SSO cookies in its original context, exercises capture/recording through the borrowed tab, and verifies that detaching leaves the original browser usable. No real account or deployed environment is used.

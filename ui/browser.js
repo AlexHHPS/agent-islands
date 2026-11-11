@@ -30,9 +30,11 @@ browserPane.innerHTML=ht`<header class="bw-bar"><h2 id="browser-heading" class="
 <div id="browser-viewport" class="bw-segment" role="group" aria-label="Tamaño de pantalla"><button type="button" class="bw-icon" data-viewport="desktop" aria-pressed="true" title="Escritorio" aria-label="Escritorio">${icon('desktop')}</button><button type="button" class="bw-icon" data-viewport="laptop" aria-pressed="false" title="Portátil" aria-label="Portátil">${icon('laptop')}</button><button type="button" class="bw-icon" data-viewport="tablet" aria-pressed="false" title="Tableta" aria-label="Tableta">${icon('tablet')}</button><button type="button" class="bw-icon" data-viewport="mobile" aria-pressed="false" title="Móvil" aria-label="Móvil">${icon('mobile')}</button></div>
 <span id="browser-issues" class="bw-issues" hidden></span></div>
 <span id="browser-recording" class="bw-recording" role="status" hidden></span><button id="browser-close" type="button" class="bw-icon" title="Cerrar navegador" aria-label="Cerrar navegador">${icon('close')}</button></header>
-<div id="browser-setup"><section class="browser-quick" aria-labelledby="browser-quick-title"><h3 id="browser-quick-title">Abre tu producto</h3><p class="browser-quick-lead">Elige el frontend que corre en tu Mac o pega su dirección.</p><div id="browser-detected" class="browser-detected" aria-live="polite"></div><form id="browser-local-form" class="browser-local"><label for="browser-local-url" class="sr-only">Dirección del frontend</label><div class="browser-inline"><input id="browser-local-url" type="url" placeholder="http://localhost:5173" autocomplete="off" spellcheck="false"><button class="primary" type="submit">Abrir</button></div></form></section>
+<div id="browser-setup"><section class="browser-quick" aria-labelledby="browser-quick-title"><h3 id="browser-quick-title">Abre tu producto</h3><p class="browser-quick-lead">Abre una dirección web o trae una pestaña con tu acceso.</p><form id="browser-local-form" class="browser-local"><label for="browser-local-url">Dirección web</label><div class="browser-inline"><input id="browser-local-url" type="url" required placeholder="https://app.example.com" autocomplete="off" spellcheck="false"><button class="primary" type="submit">Abrir</button></div><button id="browser-sign-in" type="button" class="browser-sign-in">Abrir para iniciar sesión</button></form></section>
+<section class="browser-open-tabs" aria-labelledby="browser-open-tabs-title"><div class="browser-tabs-heading"><h3 id="browser-open-tabs-title">Traer una pestaña abierta</h3><button id="browser-tabs-refresh" type="button">Actualizar pestañas</button></div><div id="browser-open-tabs" aria-live="polite"></div><details class="browser-connect-details"><summary>¿No aparece tu navegador?</summary><p>Conecta un Chromium con control remoto para conservar su sesión.</p><form id="browser-endpoint-form"><label for="browser-endpoint">Conexión del navegador</label><div class="browser-inline"><input id="browser-endpoint" type="url" placeholder="http://127.0.0.1:9222" autocomplete="off" spellcheck="false" required><button type="submit">Buscar pestañas</button></div></form></details></section>
+<details id="browser-local-servers" class="browser-saved"><summary>Servidores locales</summary><div id="browser-detected" class="browser-detected" aria-live="polite"></div></details>
 <details id="browser-saved" class="browser-saved"><summary>Entornos guardados y accesos</summary><label for="browser-environment">Entorno de esta conversación</label><select id="browser-environment"></select><div class="browser-setup-actions"><button id="browser-connect" class="primary" type="button">Abrir navegador</button><button id="browser-environments" type="button">Configurar entornos</button></div><div id="browser-logins"></div></details><div id="browser-sessions"></div><p id="browser-setup-status" class="browser-setup-status" role="status"></p></div>
-<div class="browser-body"><div id="browser-stage" hidden><img id="browser-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Navegador interactivo" tabindex="0" draggable="false"><div id="browser-selection" hidden></div><div id="annotation-layer" aria-hidden="true"></div><div id="browser-hover" class="bw-hover" hidden><small id="browser-hover-source"></small><span id="browser-hover-name"></span></div>
+<div class="browser-body" hidden><div id="browser-stage" hidden><img id="browser-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Navegador interactivo" tabindex="0" draggable="false"><div id="browser-selection" hidden></div><div id="annotation-layer" aria-hidden="true"></div><div id="browser-hover" class="bw-hover" hidden><small id="browser-hover-source"></small><span id="browser-hover-name"></span></div>
 <p id="browser-status" class="bw-toast" role="status" hidden></p>
 <form id="browser-note-form" class="bw-note" hidden><label for="browser-note" class="sr-only">Nota en este momento de la grabación</label><input id="browser-note" maxlength="1000" placeholder="Nota en este momento…" autocomplete="off"><button type="submit">Añadir nota</button></form>
 <div id="browser-settings" class="bw-panel" hidden><div class="bw-panel-head"><strong>Navegador visual</strong><span>Agent Islands</span></div>
@@ -76,7 +78,7 @@ function updateBrowserVisibility(){
  const width=Number(localStorage.getItem('islands.browserTerminalWidth'))||0;if(!browserPane.hidden&&width)$('#inspector').style.setProperty('--panel-width',width+'px');else $('#inspector').style.removeProperty('--panel-width');
  if(!browserPane.hidden)browserKick();if(typeof annotationsVisibility==='function')annotationsVisibility(!browserPane.hidden);
 }
-function browserShowSetup(on){$('#browser-setup').hidden=!on;$('#browser-controls').hidden=on;$('#browser-stage').hidden=on;$('#browser-recording').hidden=on||!browserSession?.recording}
+function browserShowSetup(on){$('.browser-body').hidden=on;$('#browser-setup').hidden=!on;$('#browser-controls').hidden=on;$('#browser-stage').hidden=on;$('#browser-recording').hidden=on||!browserSession?.recording}
 async function openBrowser(){
  const agent=browserAgent();if(!agent?.managed||!['codex','claude'].includes(agent.harness)){toast(I18n.t('Abre una conversación de Codex o Claude para adjuntar referencias.'));return}
  if(browserOwner!==agent.id){browserGeneration++;browserSession=null;browserOwner=agent.id;browserLiveSeq=0}
@@ -88,16 +90,37 @@ async function openBrowser(){
   const owner=browserOwner,generation=browserGeneration;
   const [snapshot,list]=await Promise.all([browserRPC('snapshot'),browserRPC('browser.list')]);if(generation!==browserGeneration||owner!==browserOwner)return;
   const roots=browserRoots(agent);
-  const environments=(snapshot.environments||[]).filter(e=>roots.includes(e.projectId));browserEnvironments=environments;$('#browser-environment').innerHTML=options(environments);$('#browser-connect').disabled=!environments.length;$('#browser-saved').open=environments.length>0&&!browserDetected?.servers?.length;
+  const environments=(snapshot.environments||[]).filter(e=>roots.includes(e.projectId));browserEnvironments=environments;$('#browser-environment').innerHTML=options(environments);$('#browser-connect').disabled=!environments.length;$('#browser-saved').open=false;
   $('#browser-sessions').innerHTML=(list.browsers||[]).filter(s=>s.agentId===owner).map(s=>ht`<button data-browser-session="${esc(s.id)}">${s.recording?'● Grabando · ':''}Continuar ${esc(s.url)}</button>`).join('');
   $('#browser-logins').innerHTML=(snapshot.logins||[]).filter(l=>environments.some(e=>e.id===l.environmentId)&&l.profileId===(agent.profileId||agent.harness)).map(l=>ht`<button data-browser-login="${esc(l.id)}" data-environment="${esc(l.environmentId)}">Controlar ventana de acceso · ${esc(l.account)}</button>`).join('');
   $$('[data-browser-session]').forEach(b=>b.onclick=async()=>{browserSession={id:b.dataset.browserSession};browserLiveSeq=0;await refreshBrowser()});
   $$('[data-browser-login]').forEach(b=>b.onclick=()=>connectBrowser({loginId:b.dataset.browserLogin,environmentId:b.dataset.environment}));
   renderBrowserReferences(list.references||[]);browserStatus('');
-  detectFrontends(agent,environments);
+  detectFrontends(agent,environments);refreshOpenTabs();
  }catch(e){browserStatus(e.message,true)}
 }
 var browserEnvironments=[];
+var browserOpenTabs=[];
+async function refreshOpenTabs(endpoint){
+ const generation=browserGeneration,owner=browserOwner;$('#browser-tabs-refresh').disabled=true;
+ $('#browser-open-tabs').innerHTML=ht('<p class="browser-empty">Buscando pestañas abiertas…</p>');
+ try{const result=await browserRPC('browser.tabs',endpoint?{endpoint}:{});if(generation!==browserGeneration||owner!==browserOwner)return;
+  browserOpenTabs=result.tabs||[];
+  $('#browser-open-tabs').innerHTML=browserOpenTabs.length?browserOpenTabs.map(tab=>ht`<button type="button" class="browser-tab-choice" data-open-tab="${esc(tab.id)}"><span>${icon('globe')}</span><div><strong>${esc(tab.title||tab.url)}</strong><small>${esc(tab.url)}</small></div><span>${icon('arrow')}</span></button>`).join(''):ht('<p class="browser-empty">No hay pestañas disponibles para conectar.</p>');
+  $$('[data-open-tab]').forEach(button=>button.onclick=()=>bringBrowserTab(button.dataset.openTab));
+ }catch(e){if(generation===browserGeneration)$('#browser-open-tabs').innerHTML=ht`<p class="browser-error">${esc(e.message)}</p>`}
+ finally{if(generation===browserGeneration)$('#browser-tabs-refresh').disabled=false}
+}
+async function bringBrowserTab(id){
+ const tab=browserOpenTabs.find(tab=>tab.id===id),agent=browserAgent();if(!tab||!agent)return;const generation=browserGeneration;
+ browserStatus(I18n.t('Conectando la pestaña…'));
+ try{let environmentId=tab.environmentId;
+  if(!environmentId){const url=new URL(tab.url),project=state.projects.find(p=>p.id===agent.projectId);if(!project)throw Error(I18n.t('Selecciona un directorio de proyecto activo.'));
+   let env=browserEnvironments.find(e=>e.origin===url.origin&&e.projectId===project.id);if(!env){env=await browserRPC('environment.save',{name:tab.title||url.host,origin:url.origin,projectId:project.id,projectPath:project.path,healthPath:url.pathname||'/'});if(generation!==browserGeneration)return;browserEnvironments.push(env)}environmentId=env.id;
+  }
+  if(generation===browserGeneration)await connectBrowser({tabId:tab.id,environmentId});
+ }catch(e){if(generation===browserGeneration)browserStatus(e.message,true)}
+}
 // Loopback dev servers become one-click entries; nothing is saved until the user opens one.
 async function detectFrontends(agent,environments){
  const generation=browserGeneration;$('#browser-detected').innerHTML=ht('<p class="browser-detecting">Buscando servidores locales…</p>');
@@ -107,19 +130,20 @@ async function detectFrontends(agent,environments){
   const saved=new Set(environments.map(e=>e.origin));
   $('#browser-detected').innerHTML=servers.length?servers.map(s=>ht`<button type="button" class="browser-server" data-server="${esc(s.origin)}" data-project="${esc(s.projectId||agent.projectId)}"><span class="browser-server-dot" aria-hidden="true"></span><strong>${esc(s.origin.replace('http://',''))}</strong><span>${esc(s.title||I18n.t('Sin título'))}</span>${saved.has(s.origin)?ht('<em>Guardado</em>'):''}</button>`).join(''):
    ht`<p class="browser-empty">No hay ningún servidor local respondiendo.${project?.script?ht` Arranca <code>npm run ${esc(project.script.name)}</code>${project.framework?' · '+esc(project.framework):''} en el terminal y vuelve a buscar.`:''}</p><button type="button" id="browser-detect-again">Buscar de nuevo</button>`;
-  if(!$('#browser-local-url').value&&project?.ports?.[0])$('#browser-local-url').placeholder='http://localhost:'+project.ports[0];
+  $('#browser-local-servers').open=servers.length>0;
   $$('[data-server]').forEach(b=>b.onclick=()=>openLocal(b.dataset.server,b.dataset.project));
   const again=$('#browser-detect-again');if(again)again.onclick=()=>detectFrontends(agent,environments);
  }catch(e){$('#browser-detected').innerHTML=ht`<p class="browser-empty">${esc(e.message)}</p>`}
 }
-async function openLocal(raw,projectId){
- const agent=browserAgent();if(!agent)return;let url;try{url=new URL(raw)}catch{browserStatus(I18n.t('Usa una dirección HTTP o HTTPS.'),true);return}
- if(!['http:','https:'].includes(url.protocol)){browserStatus(I18n.t('Usa una dirección HTTP o HTTPS.'),true);return}
+async function openLocal(raw,projectId,login=false){
+ const agent=browserAgent();if(!agent)return;const generation=browserGeneration;let url;try{url=new URL(raw)}catch{browserStatus(I18n.t('Usa una dirección HTTP o HTTPS.'),true);return}
+ if(!['http:','https:'].includes(url.protocol)||url.username||url.password){browserStatus(I18n.t('Usa una dirección HTTP o HTTPS.'),true);return}
  const project=state.projects.find(p=>p.id===(projectId||agent.projectId))||state.projects.find(p=>p.id===agent.projectId);if(!project){browserStatus(I18n.t('Selecciona un directorio de proyecto activo.'),true);return}
  browserStatus(I18n.t('Abriendo Chromium…'));
  try{let env=browserEnvironments.find(e=>e.origin===url.origin&&e.projectId===project.id);
-  if(!env){env=await browserRPC('environment.save',{name:url.host,origin:url.origin,projectId:project.id,projectPath:project.path,healthPath:url.pathname||'/'});browserEnvironments.push(env)}
-  await connectBrowser({environmentId:env.id});
+  if(!env){env=await browserRPC('environment.save',{name:url.host,origin:url.origin,projectId:project.id,projectPath:project.path,healthPath:url.pathname||'/'});if(generation!==browserGeneration)return;browserEnvironments.push(env)}
+  if(generation!==browserGeneration)return;
+  if(login){await browserRPC('login.open',{environmentId:env.id,url:url.href});if(generation!==browserGeneration)return;browserStatus(I18n.t('Completa el acceso en el navegador y actualiza las pestañas.'));await refreshOpenTabs()}else await connectBrowser({environmentId:env.id,url:url.href});
  }catch(e){browserStatus(e.message,true)}
 }
 async function connectBrowser(extra={}){
@@ -187,7 +211,10 @@ $('#browser-dock-toggle').onclick=()=>{if(!browserSession)return;if(browserMode=
 $('#browser-settings-toggle').onclick=()=>browserSettings($('#browser-settings').hidden);
 $('#browser-settings-environments').onclick=()=>openOperations('environments');
 $('#browser-connect').onclick=()=>connectBrowser();$('#browser-environments').onclick=()=>openOperations('environments');
-$('#browser-local-form').onsubmit=e=>{e.preventDefault();openLocal($('#browser-local-url').value||$('#browser-local-url').placeholder)};
+$('#browser-local-form').onsubmit=e=>{e.preventDefault();openLocal($('#browser-local-url').value)};
+$('#browser-sign-in').onclick=()=>{if($('#browser-local-form').reportValidity())openLocal($('#browser-local-url').value,undefined,true)};
+$('#browser-tabs-refresh').onclick=()=>refreshOpenTabs();
+$('#browser-endpoint-form').onsubmit=e=>{e.preventDefault();refreshOpenTabs($('#browser-endpoint').value)};
 $('#browser-hide').onclick=()=>{browserWanted=false;updateBrowserVisibility()};
 $('#browser-close').onclick=async()=>{if(!browserSession){browserWanted=false;updateBrowserVisibility();return}try{await browserRPC('browser.close',{id:browserSession.id});browserSession=null;browserWanted=false;browserGeneration++;setBrowserMode('navigate');updateBrowserVisibility()}catch(e){browserStatus(e.message,true)}};
 $('#browser-address-form').onsubmit=e=>{e.preventDefault();browserAction('navigate',{url:$('#browser-address').value})};$('#browser-back').onclick=()=>browserAction('back');$('#browser-reload').onclick=()=>browserAction('reload');
