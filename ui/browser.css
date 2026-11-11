@@ -33,7 +33,7 @@
 .browser-quick h3{margin:0;font-size:var(--text-xl);font-family:var(--font-display);letter-spacing:var(--font-display-tracking)}
 .browser-quick-lead{margin:0;font-size:var(--text-sm);color:var(--muted-foreground);max-width:var(--measure)}
 .browser-local label,.browser-connect-details label{display:block;font-size:var(--text-xs);margin-bottom:var(--space-2)}
-.browser-sign-in{margin-top:var(--space-2);padding-inline:0;color:var(--primary);font-size:var(--text-sm);min-height:44px}
+.browser-sign-in{margin-top:var(--space-2);padding-inline:0;color:var(--foreground);font-size:var(--text-sm);min-height:44px}
 .browser-open-tabs{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5)}
 .browser-tabs-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-3)}
 .browser-tabs-heading h3{margin:0;font-size:var(--text-base);font-weight:600}
@@ -65,6 +65,7 @@
 .browser-saved label{font-size:var(--text-xs);color:var(--muted-foreground)}
 #browser-environment{width:100%;min-height:var(--space-10)}
 .browser-setup-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.browser-setup-actions button.primary:disabled{opacity:1;color:var(--muted-foreground);background:var(--muted)}
 .browser-setup-actions button:not(.primary){border:1px solid var(--border)}
 #browser-sessions,#browser-logins{display:flex;gap:var(--space-2);flex-wrap:wrap}
 #browser-sessions:empty{display:none}
