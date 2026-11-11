@@ -2,7 +2,15 @@
 
 Changes are grouped by user-visible behavior. Versions before public distribution were local previews.
 
-## 0.12.0 — Unreleased
+## 0.13.0 — Unreleased
+
+- Give work panels the full canvas when a conversation is open or an expanded pulse has information. Remove the decorative island from that view and let panel content scroll without the old height cap.
+- Open public web addresses with their full path, query and fragment; keep local frontend discovery as a secondary option.
+- Bring a selected tab from an SSO window or a locally connected Chromium into the visual browser. Retain its live session, support captures and recordings, and detach without closing the original tab.
+- Add persistent terminal pins to the mosaic, ordered before other terminals and isolated by conversation/profile/project identity.
+- Update the private QA protocol to version 6 for tab discovery and attachment.
+
+## 0.12.0 — Initial multilingual version
 
 - Add Spanish and English across the UI, native menus/dialogues, permission descriptions, browser/QA messages and generated agent guidance.
 - Add a persistent language selector under Help/settings that updates the UI without restarting agent sessions or discarding drafts and forms.

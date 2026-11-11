@@ -53,6 +53,9 @@ body.terminals-view #inspector{display:none}
 .deck-state{display:flex;align-items:center;color:var(--muted-foreground)}
 .deck-terminal{flex:1;min-height:180px;background:var(--terminal-bg);padding:var(--space-3);overflow:hidden}
 .deck-terminal .xterm{height:100%}
+.deck-pin[aria-pressed=true]{color:var(--primary);background:var(--secondary)}
+.terminal-card.is-pinned{border-color:var(--primary)}
+.deck-pin{flex-shrink:0;min-width:44px;min-height:44px}
 .deck-actions{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-3);flex-shrink:0}
 .deck-actions button{font-size:var(--text-xs);border-radius:var(--radius-full)}
 .deck-time{margin-left:auto;color:var(--muted-foreground);font-size:var(--text-xs)}

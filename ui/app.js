@@ -441,11 +441,21 @@ function terminalTheme(){
   const css=getComputedStyle(document.documentElement),c=n=>css.getPropertyValue(n).trim();
   return {background:c('--terminal-bg'),foreground:c('--terminal-fg'),cursor:c('--terminal-green'),selectionBackground:c('--terminal-selection'),black:c('--terminal-bg'),red:c('--terminal-red'),green:c('--terminal-green'),yellow:c('--terminal-yellow'),blue:c('--terminal-blue'),magenta:c('--terminal-magenta'),cyan:c('--terminal-cyan'),white:c('--terminal-fg'),brightBlack:c('--terminal-dark'),brightWhite:c('--terminal-bright')};
 }
+function terminalPinKey(a,useID=false){return JSON.stringify([a.profileId||a.harness,state.projects.find(p=>p.id===a.projectId)?.path||a.projectId,useID?a.id:a.threadId||a.id])}
+function loadTerminalPins(){try{const rows=JSON.parse(localStorage.getItem('islands.terminalPins.v1')||'[]');return Array.isArray(rows)?[...new Set(rows.filter(k=>typeof k==='string'))].slice(0,200):[]}catch{return []}}
+var terminalPins=loadTerminalPins();
+paths.pin='M9 3h6M10 3v5l-3 4v2h10v-2l-3-4V3M12 14v7';
+function saveTerminalPins(){try{localStorage.setItem('islands.terminalPins.v1',JSON.stringify(terminalPins.slice(0,200)))}catch{}}
+function migrateTerminalPin(a){const old=terminalPinKey(a,true),key=terminalPinKey(a);if(old!==key&&terminalPins.includes(old)){terminalPins=terminalPins.map(k=>k===old?key:k);saveTerminalPins()}}
+function terminalPinRank(a){const index=terminalPins.indexOf(terminalPinKey(a));return index<0?Infinity:index}
+function toggleTerminalPin(id){const agent=state.agents.find(a=>a.id===id);if(!agent)return;const key=terminalPinKey(agent),pinned=terminalPins.includes(key);terminalPins=terminalPins.filter(k=>k!==key);if(!pinned)terminalPins.unshift(key);saveTerminalPins();renderTerminalDeck();if(!pinned)deckTerminals.get(id)?.card.scrollIntoView({block:'nearest'})}
 function renderTerminalDeck(){
   const chooser=$('#terminal-project'),chosen=chooser.value;
   const options=ht('<option value="">Todas las islas</option>')+state.projects.map(p=>ht`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
   if(chooser.innerHTML!==options){chooser.innerHTML=options;chooser.value=chosen}
   const agents=state.agents.filter(a=>a.managed&&(!chooser.value||a.projectId===chooser.value));
+  for(const a of agents)migrateTerminalPin(a);
+  agents.sort((a,b)=>terminalPinRank(a)-terminalPinRank(b));
   const ids=new Set(agents.map(a=>a.id));
   for(const [id,entry] of deckTerminals)if(!ids.has(id)){entry.observer.disconnect();entry.term.dispose();entry.card.remove();deckTerminals.delete(id)}
   $('#terminal-deck .deck-empty')?.remove();
@@ -459,7 +469,7 @@ function renderTerminalDeck(){
     let entry=deckTerminals.get(a.id);
     if(!entry){
       const card=document.createElement('article');card.className='terminal-card';card.dataset.agentId=a.id;card.dataset.slot='agent-terminal';
-      card.innerHTML=ht`<div class="deck-heading"><span class="avatar ${esc(a.harness)}">${icon(a.harness==='claude'?'claude':a.harness==='codex'?'codex':'bot')}</span><div><strong class="deck-name"></strong><span class="deck-project"></span></div><span class="permission-badge deck-permissions" hidden title="Bypass permissions">${icon('shield')}Bypass</span><span class="deck-state"></span><button class="icon-button deck-expand" title="Abrir conversación" aria-label="Abrir conversación de ${esc(a.name)}">${icon('expand')}</button></div><div class="deck-terminal"><div class="terminal-surface"></div></div><div class="deck-actions"><button data-context="status">¿Cómo vamos?</button><button data-context="recap">Recuérdame</button><span class="deck-time"></span></div>`;
+      card.innerHTML=ht`<div class="deck-heading"><span class="avatar ${esc(a.harness)}">${icon(a.harness==='claude'?'claude':a.harness==='codex'?'codex':'bot')}</span><div><strong class="deck-name"></strong><span class="deck-project"></span></div><span class="permission-badge deck-permissions" hidden title="Bypass permissions">${icon('shield')}Bypass</span><span class="deck-state"></span><button type="button" class="icon-button deck-pin" aria-pressed="false" title="Anclar terminal" aria-label="Anclar terminal">${icon('pin')}</button><button class="icon-button deck-expand" title="Abrir conversación" aria-label="Abrir conversación de ${esc(a.name)}">${icon('expand')}</button></div><div class="deck-terminal"><div class="terminal-surface"></div></div><div class="deck-actions"><button data-context="status">¿Cómo vamos?</button><button data-context="recap">Recuérdame</button><span class="deck-time"></span></div>`;
       $('#terminal-deck').append(card);
       const term=new Terminal({fontFamily:'"JetBrains Mono", Menlo, monospace',fontSize:12,lineHeight:1.35,cursorBlink:false,scrollback:6000,theme:terminalTheme()});
       const fit=new FitAddon.FitAddon();term.loadAddon(fit);term.open(card.querySelector('.terminal-surface'));
@@ -469,10 +479,12 @@ function renderTerminalDeck(){
       const observer=new ResizeObserver(()=>{if(view==='terminals')try{fit.fit()}catch{}});observer.observe(card.querySelector('.deck-terminal'));
       entry={card,term,fit,observer};deckTerminals.set(a.id,entry);
       card.querySelector('.deck-expand').onclick=()=>selectAgent(a.id);
+      card.querySelector('.deck-pin').onclick=()=>toggleTerminalPin(a.id);
       card.querySelectorAll('[data-context]').forEach(b=>b.onclick=()=>prepareContext(b.dataset.context,a.id));
       if(preview&&!native)term.writeln(I18n.t('\x1b[32mVista de diseño · datos de ejemplo\x1b[0m\r\n\r\nLa terminal interactiva de ')+a.harness+I18n.t(' aparece aquí.'));
       else send('replay',{id:a.id});
     }
+    const pinned=terminalPinRank(a)!==Infinity,pin=entry.card.querySelector('.deck-pin');pin.setAttribute('aria-pressed',String(pinned));entry.card.classList.toggle('is-pinned',pinned);I18n.attribute(pin,'aria-label',()=>pinned?I18n.t('Desanclar terminal'):I18n.t('Anclar terminal'));I18n.bind(pin,'title',()=>pinned?I18n.t('Desanclar terminal'):I18n.t('Anclar terminal'));
     I18n.bind(entry.card.querySelector('.deck-name'),"textContent",()=>a.name);
     I18n.bind(entry.card.querySelector('.deck-project'),"textContent",()=>state.projects.find(p=>p.id===a.projectId)?.name || '');
     entry.card.querySelector('.deck-state').innerHTML=icon(stateIcon(a));
@@ -482,6 +494,9 @@ function renderTerminalDeck(){
     entry.card.querySelectorAll('[data-context]').forEach(b=>b.disabled=a.processRunning===false||['exited','error'].includes(a.state));
     entry.term.options.disableStdin=a.state==='exited';
   }
+  const active=document.activeElement,deck=$('#terminal-deck');
+  agents.forEach((a,i)=>{const card=deckTerminals.get(a.id).card;if(deck.children[i]!==card)deck.insertBefore(card,deck.children[i]||null)});
+  if(active?.isConnected&&document.activeElement!==active)active.focus({preventScroll:true});
   requestAnimationFrame(fitDeck);
 }
 function fitDeck(){if(view==='terminals')for(const [id,entry] of deckTerminals)try{entry.fit.fit();send('resize',{id,cols:entry.term.cols,rows:entry.term.rows})}catch{}}

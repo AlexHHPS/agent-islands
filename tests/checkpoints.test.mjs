@@ -13,7 +13,7 @@ try{
  await page.evaluate(data=>{receiveNative({event:'snapshot',data});aiAuto=false;selectAgent('one')},snapshot);
  assert.equal(await page.locator('#world .island').count(),1);
  assert.equal(await page.locator('#world .island').getAttribute('data-project-id'),'p');
- assert(await page.locator('#agent-checkpoints').isVisible());
+ assert(await page.locator('#agent-checkpoints').isVisible());assert(await page.locator('#world').isHidden(),'Working panels replace the decorative island');
  assert((await page.locator('#agent-checkpoints').boundingBox()).height>300,'The island must leave enough space for the checkpoint beside the terminal');
  assert((await page.locator('#checkpoint-content').textContent()).includes('El próximo avance'));
  const now=Math.floor(Date.now()/1000);

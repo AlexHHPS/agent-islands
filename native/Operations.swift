@@ -40,7 +40,7 @@ extension AppDelegate {
         var params = body["params"] as? [String: Any] ?? [:]
         params["language"] = AppLanguage.current
         if activeProjectWorkspace != nil { params["projectIds"] = scopedProjects.map { $0.id } } else { params.removeValue(forKey: "projectIds") }
-        if method.hasPrefix("browser."), method != "browser.install" {
+        if (method.hasPrefix("browser.") && method != "browser.install") || (method == "login.open" && params["agentId"] != nil) {
             do { params = try browserParameters(params) }
             catch { emit("operationsResult", ["requestId": requestID, "method": method, "error": error.localizedDescription]); return }
         }
