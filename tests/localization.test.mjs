@@ -33,9 +33,9 @@ try{
  await page.evaluate(()=>selectAgent('a'));await page.locator('#prompt').fill(draft);
  await page.evaluate(()=>new Promise(r=>terminal.write('Provider says: Guardar / Cancelar\r\n',r)));
  const before=await page.evaluate(()=>messages.filter(m=>['prompt','launch','stop','workspaceActivate','intelligence'].includes(m.action)).length);
- await page.locator('#tools-menu summary').click();await page.locator('#settings').click();await page.locator('#app-language').selectOption('en');
+ await page.locator('#settings').click();assert(await page.evaluate(()=>messages.some(m=>m.action==='openSettings')),'The Mac app opens Settings in its own window');await page.evaluate(()=>{$('#help-dialog').showModal();$('#app').setAttribute('aria-hidden','true')});await page.locator('#app-language').selectOption('en');
  assert.equal(await page.locator('html').getAttribute('lang'),'en');
- assert.equal(await page.locator('#help-dialog h2').textContent(),'Your little operations center');
+ assert.equal(await page.locator('#help-dialog h2').textContent(),'Settings');
  assert.equal(await page.locator('#prompt').inputValue(),draft);
  assert.equal(await page.locator('#agent-name').textContent(),'Cancelar','Agent names are not translation keys');
  assert.equal(await page.locator('#agent-project').textContent(),userName,'Project names remain verbatim and escaped');
@@ -85,7 +85,7 @@ try{
   }
  }
  const mobile=await browser.newPage({viewport:{width:390,height:844}});
- await mobile.goto(base+'?preview=1&lang=en');await mobile.locator('#tools-menu summary').click();await mobile.locator('#settings').click();await mobile.locator('#app-language').selectOption('es');
+ await mobile.goto(base+'?preview=1&lang=en');await mobile.locator('#settings').click();await mobile.locator('#app-language').selectOption('es');
  assert.equal(await mobile.locator('html').getAttribute('lang'),'es');
  assert(await mobile.locator('#app-language').isVisible(),'Language settings remain reachable on narrow viewports');
  assert(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Language settings must not overflow');

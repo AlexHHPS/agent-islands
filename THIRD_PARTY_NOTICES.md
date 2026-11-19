@@ -8,11 +8,15 @@ Agent Islands project code is licensed under Apache-2.0. Third-party components 
 | xterm.js | Terminal rendering | MIT; [license](ui/vendor/xterm-LICENSE) |
 | xterm addon-fit | Terminal sizing | MIT; [license](ui/vendor/addon-fit-LICENSE) |
 | xterm addon-webgl | Optional terminal renderer | MIT; [license](ui/vendor/addon-webgl-LICENSE) |
+| Lucide (lucide-static) | Interface icons, generated into `ui/icons.js` by `scripts/icons.mjs` | ISC; [license](ui/vendor/lucide-LICENSE) |
+| Vendor marks (`assets/brands/`) | The owners' own marks of Claude Code, Gemini CLI, OpenCode, Goose, Hermes Agent and Docker in one colour; the Codex symbol is a LobeHub Icons redrawing | Trademarks of their owners; MIT for the Codex drawing; [notice and sources](assets/brands/NOTICE.md) |
 | Figtree | UI font | SIL Open Font License 1.1; [notice](ui/vendor/Figtree-OFL.txt) |
 | JetBrains Mono | Monospace font | SIL Open Font License 1.1; [notice](ui/vendor/JetBrains-Mono-OFL.txt) |
 | Acorn | Development-time catalogue coverage checks | MIT; original LICENSE accompanies the npm package; not packaged in the app |
 | Playwright and playwright-core | Browser automation and testing | Apache-2.0; original LICENSE/NOTICE files accompany installed and packaged modules |
 | Node.js | Bundled QA runtime | Node.js distribution license, including bundled third-party terms; copied into the app under `Contents/Resources/qa/runtime/LICENSE` |
+
+Product names and logos belong to their owners; Agent Islands shows them only to identify the tool a terminal runs and implies no endorsement.
 
 Npm dependencies are pinned in [package-lock.json](package-lock.json). Runtime versions and archive checksums are pinned in [config/runtime.json](config/runtime.json). Chromium is downloaded on demand by Playwright and has its own third-party notices; it is not part of the source archive.
 

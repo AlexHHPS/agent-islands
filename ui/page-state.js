@@ -6,7 +6,8 @@
 (() => {
   // <dialog> open state on <body>: body.<id>-open
   const dialogs = ['project-dialog', 'launch-dialog', 'search-dialog', 'operations-dialog'];
-  const syncDialogs = () => { for (const id of dialogs) document.body.classList.toggle(id + '-open', !!document.getElementById(id)?.open); };
+  // The page stays visible behind a dimmed backdrop; the islands pause while a dialog covers them.
+  const syncDialogs = () => { let any = false; for (const id of dialogs) { const open = !!document.getElementById(id)?.open; any ||= open; document.body.classList.toggle(id + '-open', open); } if (typeof IslandMotion !== 'undefined') IslandMotion.setCovered(any); };
   // The open attribute changes before the next paint, so the class never lags behind the dialog.
   const dialogObserver = new MutationObserver(syncDialogs);
   for (const id of dialogs) { const dialog = document.getElementById(id); if (dialog) dialogObserver.observe(dialog, {attributes: true, attributeFilter: ['open']}); }

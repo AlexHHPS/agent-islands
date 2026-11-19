@@ -1,0 +1,123 @@
+/* Settings window. Measures follow macOS System Settings: 13px system text, 30px sidebar rows,
+   neutral selection, grouped rows with hairline separators, 28px controls, capsule segmented control.
+   Colours come from the Atelier tokens so light, dark and increased contrast stay in step with the app. */
+:root{
+ --set-text:var(--foreground);--set-muted:var(--muted-foreground);
+ --set-line:color-mix(in srgb,var(--foreground) 10%,transparent);
+ --set-hover:color-mix(in srgb,var(--foreground) 5%,transparent);
+ --set-selected:color-mix(in srgb,var(--foreground) 9%,transparent);
+ --set-control:color-mix(in srgb,var(--foreground) 7%,transparent);
+ --set-group:var(--card);
+ --set-pane:var(--background);
+ --set-side:color-mix(in srgb,var(--foreground) 3%,var(--background));
+ --set-shadow:0 0 0 .5px color-mix(in srgb,var(--foreground) 10%,transparent),0 1px 2px color-mix(in srgb,var(--foreground) 5%,transparent);
+ --set-focus:0 0 0 1px var(--primary),0 0 0 4px color-mix(in srgb,var(--primary) 22%,transparent);
+ --set-font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font:13px/1.45 var(--set-font);color:var(--set-text);background:var(--set-pane);-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;cursor:default}
+/* In the app the window background is a system blur; only the content pane is opaque. */
+html.is-app body{background:transparent}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:0;box-shadow:var(--set-focus)}
+svg.icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+/* One row the height of the window: without minmax(0,1fr) the row grows with its content and .settings-body never scrolls. */
+.settings{display:grid;grid-template-columns:200px minmax(0,1fr);grid-template-rows:minmax(0,1fr);height:100%}
+
+/* Sidebar: room for the traffic lights, then 30px rows */
+.settings-side{display:flex;flex-direction:column;gap:2px;min-height:0;overflow:auto;padding:52px 10px 12px;background:var(--set-side);border-right:1px solid var(--set-line)}
+html.is-app .settings-side{background:transparent}
+.side-title{font-size:11px;font-weight:600;color:var(--set-muted);padding:4px 10px 6px}
+.side-item{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:0;border-radius:7px;background:transparent;text-align:left;cursor:default}
+.side-item svg{color:var(--set-muted)}
+.side-item:hover{background:var(--set-hover)}
+.side-item[aria-current="page"]{background:var(--set-selected);font-weight:600}
+.side-item[aria-current="page"] svg{color:var(--set-text)}
+
+/* Content pane */
+.settings-main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--set-pane)}
+.settings-head{height:52px;display:flex;align-items:center;padding:0 28px;flex-shrink:0;border-bottom:1px solid var(--set-line)}
+.settings-head h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.settings-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:20px 28px 32px}
+.group-title{margin:22px 0 8px 2px;font-size:13px;font-weight:600}
+.group{background:var(--set-group);border-radius:10px;box-shadow:var(--set-shadow);overflow:hidden}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 14px}
+.row+.row,.row+.disclosure,.disclosure+.disclosure{border-top:1px solid var(--set-line)}
+.row-label{display:flex;flex-direction:column;min-width:0}
+.row-label small{font-size:11.5px;color:var(--set-muted);line-height:1.35;margin-top:1px}
+.row-control{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+.value{color:var(--set-muted);font-variant-numeric:tabular-nums;-webkit-user-select:text;user-select:text}
+.muted{color:var(--set-muted)}
+.footnote{margin:10px 2px 0;font-size:11.5px;color:var(--set-muted)}
+
+/* Controls: 28px, capsule segmented control, native-like switch */
+.popup{height:28px;padding:0 28px 0 10px;border:0;border-radius:7px;background:var(--set-control);appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 14px) 12px,calc(100% - 10px) 12px;background-size:4px 4px;background-repeat:no-repeat}
+.push{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border:0;border-radius:7px;background:var(--set-control);font-weight:500;cursor:default}
+.push svg{width:13px;height:13px;color:var(--set-muted)}
+.push:hover{background:color-mix(in srgb,var(--set-control) 100%,var(--foreground) 5%)}
+.push:active{background:var(--set-selected)}
+.seg{display:inline-flex;padding:2px;gap:2px;border-radius:999px;background:var(--set-control)}
+.seg-btn{height:24px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--set-muted);font-size:12.5px;font-weight:500;cursor:default}
+.seg-btn[aria-checked="true"]{background:var(--set-group);color:var(--set-text);box-shadow:0 1px 3px color-mix(in srgb,var(--foreground) 15%,transparent),0 0 0 .5px color-mix(in srgb,var(--foreground) 8%,transparent)}
+.switch{position:relative;width:38px;height:22px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--foreground) 16%,transparent);cursor:default;transition:background .18s}
+.switch span{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .25);transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.switch[aria-checked="true"]{background:var(--primary)}
+.switch[aria-checked="true"] span{transform:translateX(16px)}
+
+/* Help: disclosure rows */
+.disclosure summary{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;list-style:none;font-weight:500;cursor:default}
+.disclosure summary::-webkit-details-marker{display:none}
+.disclosure summary svg{width:13px;height:13px;color:var(--set-muted);transition:transform .15s}
+.disclosure[open] summary svg{transform:rotate(90deg)}
+.disclosure p{margin:0;padding:0 14px 14px 35px;color:var(--set-muted);max-width:62ch;-webkit-user-select:text;user-select:text}
+
+/* About */
+.about{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0 22px}
+.about-mark{display:grid;place-items:center;width:64px;height:64px;border-radius:16px;background:color-mix(in srgb,var(--primary) 14%,var(--set-group));color:var(--primary);box-shadow:var(--set-shadow);margin-bottom:6px}
+.about-mark svg{width:32px;height:32px;stroke-width:1.4}
+.about h2{margin:0;font-size:17px;font-weight:600}
+.about p{margin:0;font-size:12px}
+
+@media (prefers-reduced-motion:reduce){.switch,.switch span,.disclosure summary svg{transition:none}}
+
+/* Avisos por estado: a dot in the state's colour, then one pill per channel (notification, Dock, sound). */
+.state-row .row-label>span{display:flex;align-items:center;gap:8px}
+.state-row .row-label>span::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--state,var(--set-muted));flex-shrink:0}
+.state-attention{--state:var(--signal-waiting,#9d5c00)}
+.state-error{--state:var(--signal-blocked,#aa3f36)}
+.state-done{--state:var(--signal-ready,#42664e)}
+.state-row .row-label small{padding-left:17px}
+.chips{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.chip-toggle{height:26px;min-height:26px;padding:0 11px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--set-line);color:var(--set-muted);font:500 12px/1 var(--set-font);cursor:default}
+.chip-toggle:hover:not(:disabled){background:var(--set-hover)}
+.chip-toggle[aria-pressed=true]{background:color-mix(in srgb,var(--primary) 14%,transparent);box-shadow:none;color:var(--set-text);font-weight:600}
+.chip-toggle:disabled{opacity:.45}
+.chip-toggle:focus-visible{outline:0;box-shadow:var(--set-focus)}
+.group-note{font-size:11.5px;color:var(--set-muted);margin:6px 4px 0;max-width:none}
+
+/* Integraciones: official mark, name and where it was found, then its status. */
+.integration-row{gap:12px}
+.integration-logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:color-mix(in srgb,var(--set-text) 5%,transparent)}
+.integration-logo .brand-logo,.integration-logo .icon{width:19px;height:19px}
+.integration-row .row-label{flex:1;min-width:0}
+.integration-row .row-label small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.integration-row .row-label small.is-path{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px}
+.integration-row.is-missing .integration-logo{opacity:.45;filter:grayscale(1)}
+.integration-row.is-missing .row-label>span{color:var(--set-muted)}
+.integration-row .row-control{display:flex;align-items:center;gap:8px}
+.status-pill{font-size:11.5px;font-weight:500;color:var(--set-muted);padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--set-text) 5%,transparent);white-space:nowrap}
+.status-pill.is-live{color:var(--signal-ready,#42664e);background:color-mix(in srgb,var(--signal-ready,#42664e) 13%,transparent)}
+.push.small{height:24px;min-height:24px;padding:0 10px;font-size:12px}
+
+/* Accent swatches, as in System Settings → Appearance: 18px circles in the bright tones, a ring and a dot on the
+   chosen one (dark, since every tone is light). */
+.swatches{display:flex;gap:9px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.swatch{width:18px;height:18px;min-height:18px;padding:0;border:0;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 0.5px rgb(0 0 0 / .2);position:relative;cursor:default}
+.swatch[aria-checked="true"]{box-shadow:0 0 0 2px var(--set-group),0 0 0 3.5px var(--swatch)}
+.swatch[aria-checked="true"]::after{content:"";position:absolute;inset:6px;border-radius:50%;background:rgb(28 28 30 / .85)}
+.swatch:focus-visible{outline:2px solid var(--swatch);outline-offset:3px}
+.swatch-graphite{--swatch:#ebebeb}.swatch-red{--swatch:#f07068}.swatch-orange{--swatch:#f09058}.swatch-yellow{--swatch:#f8d058}
+.swatch-green{--swatch:#68c878}.swatch-blue{--swatch:#5098f8}.swatch-purple{--swatch:#a880f0}.swatch-pink{--swatch:#f090c0}
+.swatch-system{--swatch:#8e8e93;background:conic-gradient(#f07068,#f09058,#f8d058,#68c878,#5098f8,#a880f0,#f090c0,#f07068)}

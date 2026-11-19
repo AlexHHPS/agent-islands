@@ -156,6 +156,8 @@ if CommandLine.arguments.contains("--self-test") {
         localizationSelfTests()
         agentStateSelfTests()
         terminalOutputSelfTests()
+        settingsSelfTests()
+        activitySelfTests()
         try aiConfigurationSelfTests()
         try Data().write(to: root.appendingPathComponent("safe.txt"))
         _ = try confinedURL(root: root.path, relative: "safe.txt")
@@ -261,6 +263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var timer: Timer?
     var statusItem: NSStatusItem!
     var notifications = UserDefaults.standard.bool(forKey: "notifications")
+    var activityChannels = mergedActivityChannels(UserDefaults.standard.dictionary(forKey: "activityChannels"))
     var voice = UserDefaults.standard.bool(forKey: "voice")
     let synthesizer = AVSpeechSynthesizer()
     var audioEngine: AVAudioEngine?
@@ -283,6 +286,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var hasUnsavedFile = false
     var persistedAgents: [String: String] = [:]
     var persistedRegistry = ""
+    var settingsWindow: NSWindow?
+    var settingsWeb: WKWebView?
+    var dragRegions: [ObjectIdentifier: DragRegions] = [:]
+    var dragMonitor: Any?
     var isTest = CommandLine.arguments.contains("--smoke-test") || CommandLine.arguments.contains("--smoke-codex")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -305,18 +312,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         config.userContentController.addUserScript(WKUserScript(source: AppLanguage.bootstrapSource, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // Only the bundled local document gets the privileged bridge.
         config.preferences.javaScriptCanOpenWindowsAutomatically = false
+        // Tab reaches every control, not only text fields, whatever the system Keyboard Navigation setting.
+        config.preferences.tabFocusesLinks = true
+        config.userContentController.addUserScript(WKUserScript(source: isAppSource, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = self
         web.uiDelegate = self
         web.setValue(false, forKey: "drawsBackground")
+        applyAppearance(UserDefaults.standard.string(forKey: "appearance") ?? "system")
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1512, height: 960), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Agent Islands"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
-        window.minSize = NSSize(width: 1080, height: 720)
-        window.contentView = web
+        window.minSize = NSSize(width: 960, height: 640)
+        // System blur behind the transparent page: the CSS sidebar (html.is-app) lets it show through.
+        window.contentView = vibrantContainer(for: web)
+        applyInterfaceStyle()
+        installWindowDragMonitor()
         window.center()
         window.setFrameAutosaveName("islands-main")
+        keepTrafficLightsCentered(in: window)
         window.makeKeyAndOrderFront(nil)
         NotificationCenter.default.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self] _ in self?.windowVisibilityChanged() }
         NSApp.activate(ignoringOtherApps: true)
@@ -324,6 +339,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         statusItem.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: "Agent Islands")
         let tray = NSMenu()
         tray.addItem(withTitle: L("Abrir Agent Islands"), action: #selector(showWindow), keyEquivalent: "")
+        tray.addItem(withTitle: L("Ajustes…"), action: #selector(openSettingsFromMenu), keyEquivalent: "")
         tray.addItem(.separator())
         tray.addItem(withTitle: L("Salir"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = tray
@@ -377,27 +393,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
     @objc func showWindow() { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
     func setupMenu() {
-        let bar = NSMenu(), appMenu = NSMenu(), appItem = NSMenuItem()
-        appMenu.addItem(withTitle: L("Acerca de Agent Islands"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
-        appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: L("Ocultar Agent Islands"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: L("Salir de Agent Islands"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        appItem.submenu = appMenu; bar.addItem(appItem)
-        let edit = NSMenu(title: L("Edición")), editItem = NSMenuItem(title: L("Edición"), action: nil, keyEquivalent: "")
-        for (title, selector, key) in [(L("Deshacer"), "undo:", "z"), (L("Rehacer"), "redo:", "Z"), (L("Cortar"), "cut:", "x"), (L("Copiar"), "copy:", "c"), (L("Pegar"), "paste:", "v"), (L("Seleccionar todo"), "selectAll:", "a")] {
-            edit.addItem(withTitle: title, action: Selector(selector), keyEquivalent: key)
+        let bar = NSMenu()
+        func submenu(_ title: String, _ build: (NSMenu) -> Void) -> NSMenu {
+            let menu = NSMenu(title: title), item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            build(menu); item.submenu = menu; bar.addItem(item); return menu
         }
-        editItem.submenu = edit; bar.addItem(editItem); NSApp.mainMenu = bar
+        @discardableResult func add(_ menu: NSMenu, _ title: String, _ action: Selector?, _ key: String = "", _ modifiers: NSEvent.ModifierFlags = .command) -> NSMenuItem {
+            let item = menu.addItem(withTitle: title, action: action, keyEquivalent: key)
+            item.keyEquivalentModifierMask = modifiers
+            return item
+        }
+        _ = submenu("Agent Islands") { menu in
+            add(menu, L("Acerca de Agent Islands"), #selector(NSApplication.orderFrontStandardAboutPanel(_:)))
+            menu.addItem(.separator())
+            add(menu, L("Ajustes…"), #selector(openSettingsFromMenu), ",")
+            menu.addItem(.separator())
+            let services = NSMenu(title: L("Servicios")), servicesItem = add(menu, L("Servicios"), nil)
+            servicesItem.submenu = services; NSApp.servicesMenu = services
+            menu.addItem(.separator())
+            add(menu, L("Ocultar Agent Islands"), #selector(NSApplication.hide(_:)), "h")
+            add(menu, L("Ocultar otros"), #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option])
+            add(menu, L("Mostrar todo"), #selector(NSApplication.unhideAllApplications(_:)), "", [])
+            menu.addItem(.separator())
+            add(menu, L("Salir de Agent Islands"), #selector(NSApplication.terminate(_:)), "q")
+        }
+        _ = submenu(L("Archivo")) { menu in
+            add(menu, L("Nuevo agente"), #selector(newAgentFromMenu), "n")
+            add(menu, L("Añadir isla…"), #selector(addIslandFromMenu), "n", [.command, .shift])
+            menu.addItem(.separator())
+            add(menu, L("Cerrar ventana"), #selector(NSWindow.performClose(_:)), "w")
+        }
+        _ = submenu(L("Edición")) { edit in
+            for (title, selector, key) in [(L("Deshacer"), "undo:", "z"), (L("Rehacer"), "redo:", "Z"), (L("Cortar"), "cut:", "x"), (L("Copiar"), "copy:", "c"), (L("Pegar"), "paste:", "v"), (L("Seleccionar todo"), "selectAll:", "a")] {
+                edit.addItem(withTitle: title, action: Selector(selector), keyEquivalent: key)
+            }
+        }
+        _ = submenu(L("Ir")) { menu in
+            add(menu, L("Terminales"), #selector(goTerminalsFromMenu), "1")
+            add(menu, L("Islas"), #selector(goWorldFromMenu), "2")
+            menu.addItem(.separator())
+            add(menu, L("Buscar"), #selector(searchFromMenu), "k")
+        }
+        _ = submenu(L("Vista")) { menu in
+            add(menu, L("Mostrar u ocultar la barra lateral"), #selector(toggleSidebarFromMenu), "s", [.command, .control])
+            menu.addItem(.separator())
+            add(menu, L("Entrar en pantalla completa"), #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control])
+        }
+        let windows = submenu(L("Ventana")) { menu in
+            add(menu, L("Minimizar"), #selector(NSWindow.performMiniaturize(_:)), "m")
+            add(menu, L("Zoom"), #selector(NSWindow.performZoom(_:)), "", [])
+            menu.addItem(.separator())
+            add(menu, L("Traer todo al frente"), #selector(NSApplication.arrangeInFront(_:)), "", [])
+        }
+        let help = submenu(L("Ayuda")) { menu in
+            add(menu, L("Ayuda de Agent Islands"), #selector(helpFromMenu), "?")
+        }
+        NSApp.mainMenu = bar
+        NSApp.windowsMenu = windows
+        NSApp.helpMenu = help
     }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         // The interface process can be killed by memory pressure or a hang; agents live here, so reload the
         // interface and let it replay every terminal from history rather than leaving a blank window.
         NSLog("Agent Islands: interface process ended; reloading")
+        if webView === settingsWeb { webView.reload(); return }
         pageReady = false
         webView.reload()
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if webView === settingsWeb { emitAppearance(); publish(); return }
         pageReady = true
+        emitAppearance()
         if CommandLine.arguments.contains("--verify-intelligence") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) { self.web.evaluateJavaScript("requestIslandsAI('status')", completionHandler: nil) }
         }
@@ -570,7 +636,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }
     }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if isBundledUIURL(navigationAction.request.url, expected: Bundle.main.resourceURL!.appendingPathComponent("ui/index.html")) { decisionHandler(.allow) }
+        // Each window may only load its own bundled page: index.html in the main window, settings.html in Settings.
+        let page = webView === settingsWeb ? "ui/settings.html" : "ui/index.html"
+        if isBundledUIURL(navigationAction.request.url, expected: Bundle.main.resourceURL!.appendingPathComponent(page)) { decisionHandler(.allow) }
         else { decisionHandler(.cancel) }
     }
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
@@ -587,7 +655,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 }
             }
         }
-        web?.evaluateJavaScript("window.receiveNative && window.receiveNative(\(json(["event": event, "data": data])))", completionHandler: nil)
+        let script = "window.receiveNative && window.receiveNative(\(json(["event": event, "data": data])))"
+        web?.evaluateJavaScript(script, completionHandler: nil)
+        // The settings window only needs app-level state, never terminal traffic.
+        if let settingsWeb, settingsEvents.contains(event) { settingsWeb.evaluateJavaScript(script, completionHandler: nil) }
     }
     /// Sends queued PTY output as one message per session. Called about 30 times a second at most.
     func flushTerminalOutput() {
@@ -622,7 +693,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let registry = agents.values.filter { $0.closedAt == nil }.sorted { $0.id < $1.id }.map { ["id": $0.id, "profileId": $0.profileId ?? $0.harness, "threadId": $0.threadId ?? "", "projectId": $0.projectId, "projectIds": $0.executionProjectIds as Any? ?? NSNull()] as [String: Any] }
         let serializedRegistry = json(registry)
         if serializedRegistry != persistedRegistry, (try? Data(serializedRegistry.utf8).write(to: support.appendingPathComponent("qa/agents.json"), options: .atomic)) != nil { persistedRegistry = serializedRegistry }
-        emit("snapshot", data)
+        var snapshot = data; snapshot["activityChannels"] = activityChannels
+        emit("snapshot", snapshot)
+        updateDockBadge()
         let n = agents.values.filter { agentIsInScope($0) && $0.closedAt == nil && AgentControlState($0).needsAttention }.count
         statusItem?.button?.title = n > 0 ? " \(n)" : ""
     }
@@ -630,8 +703,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func message(_ text: String) { emit("error", ["message": text]) }
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, message.frameInfo.request.url?.isFileURL == true,
-              isBundledUIURL(message.frameInfo.request.url, expected: Bundle.main.resourceURL!.appendingPathComponent("ui/index.html")),
               let b = message.body as? [String: Any], let action = b["action"] as? String else { return }
+        let ui = Bundle.main.resourceURL!.appendingPathComponent("ui", isDirectory: true)
+        // The settings page gets a narrow bridge: app preferences only, never terminals or files.
+        if message.webView === settingsWeb {
+            guard isBundledUIURL(message.frameInfo.request.url, expected: ui.appendingPathComponent("settings.html")), settingsActions.contains(action) else { return }
+            handleSettingsMessage(action, b)
+            return
+        }
+        guard isBundledUIURL(message.frameInfo.request.url, expected: ui.appendingPathComponent("index.html")) else { return }
+        if handleShellMessage(action, b) { return }
         let project = projects.first { $0.id == b["projectId"] as? String }
         do {
             if let project, !projectIsInScope(project.id), !["workspaceSave", "workspaceActivate", "addProject"].contains(action) { throw launchFailure(L("El proyecto está fuera del workspace activo.")) }
@@ -639,13 +720,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             switch action {
             case "language":
                 guard let language = b["language"] as? String, AppLanguage.supported.contains(language) else { return }
-                AppLanguage.set(language); setupMenu()
-                let controller = web.configuration.userContentController
-                let otherScripts = controller.userScripts.filter { !$0.source.hasPrefix("window.islandsLanguage=") }
-                controller.removeAllUserScripts()
-                for script in otherScripts { controller.addUserScript(script) }
-                controller.addUserScript(WKUserScript(source: AppLanguage.bootstrapSource, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-                if let menu = statusItem.menu { menu.removeAllItems(); menu.addItem(withTitle: L("Abrir Agent Islands"), action: #selector(showWindow), keyEquivalent: ""); menu.addItem(.separator()); menu.addItem(withTitle: L("Salir"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q") }
+                applyLanguage(language, from: web)
             case "ready": publish()
             case "operations": qaCall(b)
             case "visualReferenceOpen": if let id = b["referenceId"] as? String { try openVisualReference(id) }
@@ -978,7 +1053,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 if let notice = session.signals.consume(bytes).first, Date().timeIntervalSince(session.lastBell) > 4 {
                     session.lastBell = Date()
                     // OSC/bell is a notification, not evidence of a blocker or a decision.
-                    self.alert(id, message: String(notice.prefix(180))); self.publish()
+                    self.alert(id, message: String(notice.prefix(180)), kind: "attention"); self.publish()
                 }
             }
         }
@@ -1240,7 +1315,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             }
             if interaction != nil || state == "ready" || state == "error" {
                 let brief = text.isEmpty ? (state == "waiting" ? L("Necesito tu atención.") : L("He terminado mi turno.")) : String(text.prefix(180))
-                alert(id, message: brief)
+                alert(id, message: brief, kind: activityKind(interaction: interaction, state: state))
                 if voice { speak(parent.name + ". " + brief) }
             }
             changed = true
@@ -1256,11 +1331,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             }
         }
     }
-    func alert(_ id: String, message: String) {
-        emit("attention", ["id": id, "message": message])
-        guard notifications, let agent = agents[id] else { return }
-        let content = UNMutableNotificationContent(); content.title = agent.name; content.body = message; content.sound = .default; content.userInfo = ["agentId": id]
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+    func alert(_ id: String, message: String, kind: String) {
+        emit("attention", ["id": id, "message": message, "kind": kind])
+        guard let agent = agents[id] else { return }
+        deliverActivity(agent, message: message, kind: kind)
     }
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         DispatchQueue.main.async { self.showWindow(); if let id = response.notification.request.content.userInfo["agentId"] as? String { self.emit("select", ["id": id]) } }; completionHandler()

@@ -6,9 +6,9 @@
 'use strict';
 const IslandMotion = (() => {
   const frameMs = 1000 / 24, quietMs = 20000, live = new Map();
-  let awakeUntil = performance.now() + quietMs, windowVisible = true, raf = 0, timer = 0, last = 0, drawn = 0;
+  let awakeUntil = performance.now() + quietMs, windowVisible = true, covered = false, raf = 0, timer = 0, last = 0, drawn = 0;
   const mount = Diorama.mount;
-  const canAnimate = () => windowVisible && !document.hidden && performance.now() < awakeUntil;
+  const canAnimate = () => windowVisible && !covered && !document.hidden && performance.now() < awakeUntil;
   function tick(now) {
     raf = 0;
     if (!canAnimate()) { last = 0; return; }
@@ -23,6 +23,8 @@ const IslandMotion = (() => {
   function schedule() { if (!raf && !timer && canAnimate() && [...live.values()].some(e => e.visible)) raf = requestAnimationFrame(tick); }
   function wake(ms = quietMs) { awakeUntil = Math.max(awakeUntil, performance.now() + ms); schedule(); }
   function setWindowVisible(visible) { windowVisible = !!visible; if (windowVisible) wake(); }
+  // A modal dialog covers the page: islands hold their frame behind it (the page stays visible, dimmed).
+  function setCovered(value) { covered = !!value; if (!covered) wake(); }
   Diorama.mount = (fig, opts = {}) => {
     const ctx = mount(fig, opts);
     if (ctx.reduced) return ctx;
@@ -42,6 +44,6 @@ const IslandMotion = (() => {
   };
   for (const type of ['pointermove', 'pointerdown', 'wheel']) document.addEventListener(type, () => { if (performance.now() > awakeUntil - quietMs + 500) wake(); }, {passive: true});
   document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
-  return {wake, setWindowVisible, get animating() { return (raf !== 0 || timer !== 0) && canAnimate(); }, get count() { return live.size; }, get frames() { return drawn; }, frameMs, quietMs};
+  return {wake, setWindowVisible, setCovered, get animating() { return (raf !== 0 || timer !== 0) && canAnimate(); }, get count() { return live.size; }, get frames() { return drawn; }, frameMs, quietMs};
 })();
 window.IslandMotion = IslandMotion;

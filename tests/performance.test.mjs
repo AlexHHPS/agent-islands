@@ -56,7 +56,7 @@ try {
   assert(moves < 120, `An animated frame moves few elements (got ${moves.toFixed(0)} per frame)`);
 
   await page.evaluate(() => document.querySelector('#search-dialog').showModal());
-  assert(await page.evaluate(() => document.body.classList.contains('search-dialog-open') && getComputedStyle(document.querySelector('#app')).visibility === 'hidden'), 'An open dialog hides the app behind it through a class');
+  assert(await page.evaluate(() => document.body.classList.contains('search-dialog-open') && getComputedStyle(document.querySelector('#app')).visibility === 'visible' && !IslandMotion.animating), 'An open dialog keeps the app visible behind it and pauses the islands');
   await page.keyboard.press('Escape');
   assert.equal(await page.evaluate(() => document.body.classList.contains('search-dialog-open')), false, 'Closing the dialog clears the class');
 

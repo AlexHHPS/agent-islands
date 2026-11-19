@@ -17,7 +17,7 @@ try{
  await page.locator('#launch-dialog .close-dialog').first().click();await page.evaluate(()=>selectAgent('one'));
  await page.evaluate(()=>receiveNative({event:'checkpointsLoaded',data:{records:{'["claude-personal","/tmp/portal","thread"]':[{summary:'Avance personal',headline:'Acceso más sencillo',changes:['Recuperación de cuenta'],generatedAt:Date.now()/1000,capturedAt:Date.now()/1000,source:'Test'}]}}}));
  assert((await page.locator('#checkpoint-content').textContent()).includes('Avance personal'));
- await page.locator('#tools-menu summary').click();await page.locator('#open-operations').click();assert(await page.locator('#operations-dialog').isVisible());
+ await page.locator('#open-operations').click();assert(await page.locator('#operations-dialog').isVisible());
  const data={environments:[{id:'env',name:'Dev',projectId:'p',origin:'https://dev.example.test'}],recipes:[{id:'journey',name:'Recuperar cuenta',environmentId:'env'}],runs:[],leases:[],auth:[],logins:[],incidents:[],installations:[]};
  await page.evaluate(data=>receiveNative({event:'operationsResult',data:{method:'snapshot',result:data}}),data);
  assert.equal(await page.locator('#qa-profile').inputValue(),'claude-personal');

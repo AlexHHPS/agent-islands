@@ -4,23 +4,6 @@
 // open, a click annotates an element and a drag marks an area.
 var browserSession=null,browserOwner=null,browserWanted=false,browserMode='navigate',browserPending=new Map(),browserReferencesSeen=new Set(),browserRequestChain=Promise.resolve(),visualSendDrafts=new Map(),browserRecordings=new Map();
 let browserFrameBusy=false,browserGeneration=0,browserScope=workspaceScopeIdentity(state),browserDrag=null,browserHoverTimer=null,browserLiveRunning=false,browserLiveSeq=0,browserTabsKey='',browserDetected=null,browserStatusTimer=null,browserPointer=null;
-Object.assign(paths,{
- globe:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M3.5 9h17M3.5 15h17M12 3c-3 3.2-3 14.8 0 18M12 3c3 3.2 3 14.8 0 18',
- launcher:'M4 6h16M4 12h9M4 18h5M17.5 13.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z',
- pointer:'M5 4l5.6 15 2.3-6.2L19 10.5ZM18 15v5M15.5 17.5h5',
- text:'M5 7V5h14v2M12 5v14M9 19h6',
- camera:'M4 8h3.5L9 5.5h6L16.5 8H20v11H4ZM12 10.5a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4',
- record:'M12 6.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11',stop:'M8 8h8v8H8Z',
- pause:'M9 6v12M15 6v12',play:'M8 5.5v13l10.5-6.5Z',
- eye:'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
- eyeOff:'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4 4l16 16',
- list:'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
- send:'M21 3 10 14M21 3l-7 18-4-7-7-4Z',check:'M5 12.5l4.5 4.5L19 7.5',
- trash:'M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5',
- gear:'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1',
- back:'M15 5l-7 7 7 7',reload:'M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15',chevron:'M9 6l6 6-6 6',pencil:'M15 5l4 4L8 20H4v-4Z',
- desktop:'M3 5h18v11H3ZM8.5 20h7M12 16v4',laptop:'M5 6h14v9H5ZM2.5 18.5h19',tablet:'M6 3h12v18H6ZM11 18h2',mobile:'M8 3h8v18H8ZM11 18h2'
-});
 const browserPane=document.createElement('section');browserPane.id='browser-pane';browserPane.hidden=true;browserPane.dataset.slot='controlled-browser';browserPane.dataset.mode='navigate';I18n.attribute(browserPane,'aria-label',()=>I18n.t('Navegador de la conversación'));
 const dockButton=(attrs,name,label,key='')=>`<button type="button" class="dock-button" ${attrs} aria-label="${label}"${key?` data-key="${key}"`:''}>${icon(name)}</button>`;
 browserPane.innerHTML=ht`<header class="bw-bar"><h2 id="browser-heading" class="sr-only">Navegador</h2><button id="browser-hide" type="button" class="bw-icon" title="Volver a islas" aria-label="Volver a islas">${icon('island')}</button>
@@ -41,7 +24,7 @@ browserPane.innerHTML=ht`<header class="bw-bar"><h2 id="browser-heading" class="
 <div class="bw-row"><span>Detalle para el agente</span><button type="button" id="annotation-level" class="bw-cycle" data-level="standard"><span id="annotation-level-label">Estándar</span><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></button></div>
 <div class="bw-row"><span>Adjuntar avisos de la página</span><button type="button" id="annotation-issues-default" class="bw-switch" role="switch" aria-checked="true" aria-label="Adjuntar avisos de la página"></button></div>
 <div id="browser-references" class="bw-references" aria-label="Referencias de esta conversación"></div>
-<button type="button" id="browser-settings-environments" class="bw-link">Configurar entornos ${icon('chevron')}</button></div>
+<button type="button" id="browser-settings-environments" class="bw-link">Configurar entornos ${icon('arrow')}</button></div>
 <div id="browser-dock" class="bw-dock" data-open="false" role="toolbar" aria-label="Herramientas del navegador"><div class="dock-tools">
 ${dockButton('data-browser-mode="annotate" aria-pressed="false"','pointer','Anotar elementos','A')}${dockButton('data-browser-mode="text" aria-pressed="false"','text','Anotar texto','T')}${dockButton('data-browser-mode="region" aria-pressed="false"','camera','Capturar componente o región','C')}<span class="dock-sep"></span>
 ${dockButton('id="browser-freeze" aria-pressed="false"','pause','Pausar animaciones','P')}${dockButton('id="annotation-markers-toggle" aria-pressed="false"','eye','Ocultar marcadores','H')}${dockButton('id="annotation-rail-toggle" aria-pressed="false"','list','Anotaciones','L')}<span class="dock-send">${dockButton('id="annotation-send" disabled','send','Añadir al mensaje')}<b id="annotation-send-count" class="dock-badge" hidden></b></span>${dockButton('id="annotation-clear" data-danger="true" disabled','trash','Borrar borradores','X')}${dockButton('id="browser-settings-toggle" aria-pressed="false"','gear','Ajustes')}<span class="dock-sep"></span></div>

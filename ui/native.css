@@ -1,0 +1,463 @@
+/* Native macOS layer, loaded last. Measurements follow AppKit and Apple's own apps (Finder, Mail,
+   System Settings) and Glim's nativo.css: 13px system font, 30px source-list rows, 28px controls,
+   52px toolbar strip under the traffic lights, neutral selection, 0.5px hairlines.
+   In the Mac app (html.is-app) the sidebar is transparent so the window's vibrancy shows through. */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --sidebar-width: 232px;
+  --toolbar-height: 52px;
+  --row-height: 30px;
+  --control-height: 28px;
+  --hairline: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --hover-fill: color-mix(in srgb, var(--foreground) 5%, transparent);
+  --selected-fill: color-mix(in srgb, var(--foreground) 9%, transparent);
+  --control-fill: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --card-shadow: 0 0 0 0.5px color-mix(in srgb, var(--foreground) 9%, transparent), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+body { font-size: 13px; -webkit-font-smoothing: antialiased; }
+/* Interface text is not a document: labels, titles and toolbars do not select or show the I-beam, as in
+   AppKit. Text people may want to copy (fields, code, terminal output, an agent's last line) opts back in. */
+html.is-app body { -webkit-user-select: none; user-select: none; cursor: default; }
+html.is-app :is(input, textarea, [contenteditable], pre, code, .xterm, .deck-reason, .annotation-reply, .question-answer, .selectable) { -webkit-user-select: text; user-select: text; }
+html.is-app :is(input:not([type=checkbox], [type=radio], [type=range], [type=button]), textarea, [contenteditable]) { cursor: text; }
+
+/* Pointer-sized controls: 44px is a touch target; on the Mac a toolbar button is 28 to 32px. */
+button { min-height: var(--control-height); }
+.icon-button { width: 32px; height: 32px; min-height: 32px; padding: 6px; border-radius: 8px; }
+svg.icon { width: 17px; height: 17px; }
+button:active { transform: none; }
+:focus-visible { outline: 0; box-shadow: 0 0 0 1px var(--ring), 0 0 0 4px color-mix(in srgb, var(--ring) 22%, transparent); }
+
+/* Shell: sidebar | content | inspector. The old top bar and status bar are gone. */
+#app { flex-direction: column; }
+.workspace { flex: 1; display: flex; min-height: 0; }
+
+.sidebar {
+  width: var(--sidebar-width); flex-shrink: 0; display: flex; flex-direction: column; min-height: 0;
+  background: color-mix(in srgb, var(--secondary) 55%, var(--background));
+  border-right: 1px solid var(--hairline);
+  transition: width var(--dur-fast) var(--ease-out), margin var(--dur-fast) var(--ease-out);
+}
+html.is-app .sidebar { background: transparent; }
+html.is-app body, html.is-app #app { background: transparent; }
+html.is-app .main-pane, html.is-app .inspector { background: var(--background); }
+
+.sidebar-head { height: var(--toolbar-height); flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 16px; }
+html.is-app .sidebar-head { padding-left: 84px; }
+.sidebar-head .brand { flex: 1; min-width: 0; gap: 8px; }
+.sidebar-head .brand strong { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-head .brand-mark .icon { width: 20px; height: 20px; }
+html.is-app .sidebar-head .brand-mark { display: none; }
+#sidebar-toggle { width: 28px; height: 28px; min-height: 28px; padding: 5px; color: var(--muted-foreground); }
+
+.sidebar-search {
+  display: flex; align-items: center; gap: 6px; margin: 0 10px 8px; width: auto; min-width: 0; height: var(--control-height);
+  padding: 0 8px 0 10px; border: 0; border-radius: 8px; background: var(--control-fill); color: var(--muted-foreground);
+  font-size: 13px; justify-content: flex-start;
+}
+.sidebar-search:hover { background: color-mix(in srgb, var(--foreground) 9%, transparent); }
+.sidebar-search .icon { width: 14px; height: 14px; }
+.sidebar-search .sidebar-search-label { flex: 1; text-align: left; display: block !important; }
+.sidebar-search kbd { display: inline !important; font-family: var(--font-sans); font-size: 11px; color: var(--muted-foreground); border: 0; padding: 0; }
+
+#sidebar-workspace { padding: 0 10px 4px; }
+#sidebar-workspace #workspace-bar { display: block; padding: 0; border: 0; background: transparent; }
+#sidebar-workspace #workspace-menu { width: 100%; }
+#sidebar-workspace #workspace-menu > summary {
+  width: 100%; min-height: var(--row-height); height: var(--row-height); justify-content: flex-start; gap: 8px;
+  padding: 0 8px 0 10px; border: 0; border-radius: 7px; background: transparent; font-size: 13px; font-weight: 500;
+}
+#sidebar-workspace #workspace-menu > summary:hover, #sidebar-workspace #workspace-menu[open] > summary { background: var(--hover-fill); }
+#sidebar-workspace #workspace-current { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; text-align: left; }
+#sidebar-workspace #workspace-menu .menu-items { inset: calc(100% + 4px) auto auto 0; min-width: 100%; }
+
+.sidebar-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 10px 8px; }
+.sidebar-group + .sidebar-group { margin-top: 10px; }
+.view-switch.sidebar-group { display: block; background: transparent; padding: 0; border-radius: 0; flex: none; order: 0; }
+.sidebar-label { font-size: 11px; font-weight: 600; color: var(--muted-foreground); padding: 8px 10px 4px; margin: 0; letter-spacing: 0; }
+
+.nav-row, #sidebar-tools button {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: var(--row-height); min-height: var(--row-height);
+  padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--foreground);
+  font-size: 13px; font-weight: 400; text-align: left; box-shadow: none; transition: none;
+}
+.nav-row:hover, #sidebar-tools button:hover { background: var(--hover-fill); }
+.nav-row.selected, .nav-row[aria-current] { background: var(--selected-fill); box-shadow: none; font-weight: 600; color: var(--foreground); }
+.nav-row .icon, #sidebar-tools button .icon { width: 16px; height: 16px; color: var(--muted-foreground); }
+.nav-row.selected .icon, .nav-row[aria-current] .icon { color: var(--primary); }
+.view-switch .nav-row { min-width: 0; min-height: var(--row-height); height: var(--row-height); padding-inline: 10px; border-radius: 7px; justify-content: flex-start; color: var(--foreground); }
+.view-switch .nav-row .icon { width: 16px; height: 16px; }
+.nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-count { font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; font-weight: 400; }
+.nav-badge {
+  font-size: 11px; font-weight: 600; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-flex;
+  align-items: center; justify-content: center; color: var(--signal-waiting);
+  background: color-mix(in srgb, var(--signal-waiting) 16%, transparent); font-variant-numeric: tabular-nums;
+}
+.project-row .project-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin: 0 4px; background: var(--signal-idle); }
+.project-row.signal-working .project-dot { background: var(--signal-working); }
+.project-row.signal-waiting .project-dot { background: var(--signal-waiting); }
+.project-row.signal-blocked .project-dot { background: var(--signal-blocked); }
+.project-row.signal-plan .project-dot { background: var(--signal-plan); }
+.project-row.signal-goal .project-dot { background: var(--signal-goal); }
+.project-row.signal-ready .project-dot { background: var(--signal-ready); }
+.sidebar-empty { font-size: 12px; color: var(--muted-foreground); padding: 4px 10px; }
+
+#tools-menu.sidebar-group { position: static; }
+#sidebar-tools { position: static; inset: auto; display: block; width: auto; min-width: 0; max-width: none; padding: 0; background: transparent; border: 0; box-shadow: none; }
+#sidebar-tools button { min-height: var(--row-height); font-size: 13px; }
+
+.sidebar-foot { flex-shrink: 0; padding: 8px 10px 12px; border-top: 1px solid var(--hairline); }
+.sidebar-foot #settings { justify-content: flex-start; }
+.sidebar-status { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 0; font-size: 11px; color: var(--muted-foreground); max-width: none; }
+.sidebar-status .version { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+/* Hidden sidebar (⌃⌘S): the toggle stays where the title bar puts it, next to the traffic lights. */
+body.sidebar-hidden:not([data-nav="top"]) .sidebar { width: 0; border-right: 0; overflow: hidden; }
+body.sidebar-hidden:not([data-nav="top"]) .sidebar > :not(.sidebar-head) { visibility: hidden; }
+body.sidebar-hidden:not([data-nav="top"]) #sidebar-toggle { position: fixed; top: 12px; left: 12px; z-index: 30; background: var(--card); box-shadow: var(--card-shadow); }
+html.is-app body.sidebar-hidden:not([data-nav="top"]) #sidebar-toggle { left: 84px; background: transparent; box-shadow: none; }
+html.is-app body.sidebar-hidden:not([data-nav="top"]) .world-heading, html.is-app body.sidebar-hidden:not([data-nav="top"]) .terminal-board-heading { padding-left: 128px; }
+body.sidebar-hidden:not([data-nav="top"]) .sidebar-head .brand { display: none; }
+
+/* Navigation layouts (Settings → General → Navegación). Top: one 52px toolbar under the traffic lights with
+   the views as a segmented control, search and tools on the right. Right: the same vertical tabs on the other side. */
+/* In the top layout the bar is moved above .workspace (sidebar.js), so the content row keeps the exact side-layout geometry. */
+body[data-nav="top"] .sidebar {
+  flex: 0 0 auto; width: auto; height: var(--toolbar-height); flex-direction: row; align-items: center; gap: 8px;
+  padding: 0 12px 0 16px; border-right: 0; border-bottom: 1px solid var(--hairline); background: color-mix(in srgb, var(--secondary) 45%, var(--background));
+}
+html.is-app body[data-nav="top"] .sidebar { padding-left: 84px; background: transparent; }
+body[data-nav="top"] .sidebar-head { height: auto; padding: 0; flex: 0 0 auto; order: 0; }
+html.is-app body[data-nav="top"] .sidebar-head { padding-left: 0; }
+html.is-app body[data-nav="top"] .sidebar-head .brand-mark { display: flex; }
+body[data-nav="top"] #sidebar-toggle, body[data-nav="top"] #sidebar-islands, body[data-nav="top"] .sidebar-label, body[data-nav="top"] .sidebar-status { display: none; }
+body[data-nav="top"] #sidebar-workspace { order: 1; padding: 0; }
+body[data-nav="top"] #sidebar-workspace #workspace-menu > summary { width: auto; max-width: 220px; }
+body[data-nav="top"] .sidebar-scroll, body[data-nav="top"] .sidebar-foot { display: contents; }
+body[data-nav="top"] .view-switch.sidebar-group { order: 2; margin: 0 auto; display: flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--control-fill); }
+body[data-nav="top"] .view-switch .nav-row { width: auto; height: 28px; min-height: 28px; padding: 0 14px; border-radius: 999px; font-weight: 500; gap: 6px; }
+body[data-nav="top"] .view-switch .nav-row.selected, body[data-nav="top"] .view-switch .nav-row[aria-current] { background: var(--card); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.06); font-weight: 600; }
+body[data-nav="top"] .view-switch .nav-label { flex: none; }
+body[data-nav="top"] .view-switch .nav-count:empty { display: none; }
+/* HIG toolbar: the leading edge belongs to the traffic lights and the context (workspace) menu, the view picker
+   sits in the centre, icon-only tool buttons come next and the search field closes the trailing edge.
+   No app name (the window has no document title to show). Settings closes the trailing edge after the search
+   field, as in Rex, besides its place in the app menu (⌘,). */
+html.is-app body[data-nav="top"] .sidebar-head { display: none; }
+body[data-nav="top"] #tools-menu.sidebar-group { order: 3; margin: 0; }
+body[data-nav="top"] #sidebar-tools { display: flex; gap: 2px; }
+body[data-nav="top"] #sidebar-tools button { position: relative; width: 32px; height: 28px; min-height: 28px; padding: 0; justify-content: center; border-radius: 7px; }
+body[data-nav="top"] #sidebar-tools button .icon { width: 17px; height: 17px; color: var(--muted-foreground); }
+body[data-nav="top"] #sidebar-tools button:hover .icon { color: var(--foreground); }
+body[data-nav="top"] #sidebar-tools button > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+body[data-nav="top"] .sidebar-search { order: 4; margin: 0 0 0 4px; width: 200px; flex: 0 1 200px; }
+body[data-nav="top"] .sidebar-foot #settings { order: 5; width: 28px; height: 28px; min-height: 28px; padding: 5px; justify-content: center; }
+body[data-nav="top"] .sidebar-foot #settings span { display: none; }
+
+body[data-nav="top"].agent-focused .inspector.has-agent { --panel-width: max(29rem, calc(100vw - 30rem)); }
+body[data-nav="right"] .sidebar { order: 3; border-right: 0; border-left: 1px solid var(--hairline); }
+body[data-nav="right"] .main-pane { order: 1; }
+body[data-nav="right"] .inspector { order: 2; }
+html.is-app body[data-nav="right"] .sidebar-head { padding-left: 16px; }
+html.is-app body[data-nav="right"] .sidebar-head .brand-mark { display: flex; }
+html.is-app body[data-nav="right"] .world-heading, html.is-app body[data-nav="right"] .terminal-board-heading, html.is-app body[data-nav="right"] .agent-top { padding-left: 92px; }
+@media (max-width: 1100px) { body[data-nav="top"] .sidebar-search .sidebar-search-label { display: none; } body[data-nav="top"] .sidebar-search { width: auto; flex: none; } }
+
+/* Page toolbar: the 52px strip under the title bar carries the title and the page actions. */
+.world-heading, .terminal-board-heading { min-height: var(--toolbar-height); padding: 14px 24px 10px; gap: 8px; align-items: center; }
+.world-heading h1, .terminal-board-heading h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.terminal-board-heading p, #world-counts { font-size: 12px; margin-top: 2px; }
+.world-heading .primary.icon-button, .terminal-board-heading .primary.icon-button { width: 32px; height: 32px; min-height: 32px; }
+.terminal-board-heading .control-menu > summary { min-width: 32px; min-height: 32px; height: 32px; padding: 6px; border: 0; background: transparent; border-radius: 8px; }
+.terminal-board-heading .control-menu > summary:hover, .terminal-board-heading .control-menu[open] > summary { background: var(--hover-fill); }
+
+/* Pulse as a summary row: four figures that also filter the board. */
+.terminal-board-heading #terminal-pulse { order: 4; flex: 1 0 100%; margin-top: 6px; }
+#world-pulse { padding: 0 24px 12px; }
+#situation { border: 0; border-radius: 12px; background: var(--card); box-shadow: var(--card-shadow); }
+#terminal-pulse #situation { border-radius: 12px; }
+#situation .pulse-toolbar, #terminal-pulse .pulse-toolbar { padding: 6px 6px 6px 14px; gap: 6px; align-items: stretch; }
+#situation .widget-mark { display: none; }
+#situation .pulse-heading { display: flex; align-items: stretch; gap: 0; }
+#situation .pulse-heading h2 { font-size: 12px; font-weight: 600; color: var(--muted-foreground); align-self: center; margin-right: 12px; min-width: 3.5rem; }
+#pulse-overview { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; color: var(--muted-foreground); font-size: 12px; }
+.pulse-stat {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 52px; height: auto;
+  padding: 6px 14px; border-radius: 9px; background: transparent; border: 0; text-align: left; color: var(--muted-foreground);
+  position: relative;
+}
+.pulse-stat + .pulse-stat::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 1px; background: var(--hairline); }
+.pulse-stat:hover { background: var(--hover-fill); }
+.pulse-stat:hover::before, .pulse-stat:hover + .pulse-stat::before, .pulse-stat.is-active::before, .pulse-stat.is-active + .pulse-stat::before { opacity: 0; }
+.pulse-stat.is-active { background: color-mix(in srgb, var(--signal) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 45%, transparent); }
+.pulse-stat-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+#pulse-overview .pulse-stat i { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); }
+#pulse-overview .pulse-stat b { font-size: 22px; line-height: 1.1; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+#pulse-overview .pulse-stat.is-zero b { color: var(--muted-foreground); font-weight: 500; }
+.pulse-stat.signal-working { --signal: var(--signal-working); }
+.pulse-stat.signal-waiting { --signal: var(--signal-waiting); }
+.pulse-stat.signal-goal { --signal: var(--signal-goal); }
+.pulse-stat.signal-ready { --signal: var(--signal-ready); }
+#situation #ai-refresh, #situation #situation-toggle { align-self: center; }
+#terminal-pulse #situation-body { inset: calc(100% + 6px) 0 auto auto; width: min(34rem, 100%); border: 0; box-shadow: 0 0 0 0.5px var(--hairline), 0 10px 30px rgb(0 0 0 / 0.16); border-radius: 12px; }
+
+/* Terminal cards: hairline edge, state in words, quiet close. */
+#terminal-deck { padding: 4px 24px 24px; gap: 14px; }
+.terminal-card { border: 0; border-radius: 12px; box-shadow: var(--card-shadow); background: var(--card); }
+.terminal-card.is-pinned { box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 55%, transparent), 0 1px 2px rgb(0 0 0 / 0.04); }
+.deck-heading { min-height: 48px; padding: 6px 8px 6px 12px; gap: 10px; }
+.deck-heading .avatar { width: 28px; height: 28px; }
+.deck-name { font-size: 13px; font-weight: 600; }
+.deck-project { font-size: 12px; }
+.deck-state {
+  display: inline-flex !important; align-items: center; gap: 5px; height: 22px; padding: 0 8px 0 6px; border-radius: 11px;
+  font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+  background: color-mix(in srgb, currentColor 11%, transparent);
+}
+.deck-state-icon { display: inline-flex; }
+.deck-state-icon .icon { width: 14px; height: 14px; }
+.deck-actions { display: flex; align-items: center; gap: 2px; margin-left: 2px; }
+.deck-actions .icon-button { width: 28px; height: 28px; min-height: 28px; padding: 5px; color: var(--muted-foreground); }
+.deck-actions .icon-button:hover { color: var(--foreground); background: var(--hover-fill); }
+.deck-actions .deck-close:hover { color: var(--destructive); }
+.deck-pin[aria-pressed="true"] { color: var(--primary); }
+/* Closing is destructive and rare: it appears with the pointer or keyboard focus, after the other actions. */
+.terminal-card .deck-close { opacity: 0; transition: opacity var(--dur-fast); }
+.terminal-card:hover .deck-close, .terminal-card:focus-within .deck-close, .deck-close:disabled { opacity: 1; }
+@media (hover: none) { .terminal-card .deck-close { opacity: 1; } }
+@container terminal-card (max-width: 26rem) { .deck-state-label { display: none; } .deck-state { padding: 0 5px; } }
+
+/* A card that needs you reads as such without relying on colour alone: tinted header plus the label. */
+.terminal-card.needs-you { --needs: var(--signal-waiting); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--needs) 60%, transparent), 0 4px 14px color-mix(in srgb, var(--needs) 14%, transparent); }
+.terminal-card.needs-you[data-signal="blocked"] { --needs: var(--signal-blocked); }
+.terminal-card.needs-you .deck-heading { background: color-mix(in srgb, var(--needs) 10%, var(--card)); }
+.terminal-card.needs-you .deck-state { color: var(--needs); background: color-mix(in srgb, var(--needs) 16%, transparent); font-weight: 600; }
+
+/* Reason for the attention, under the header: the agent's question in one line. */
+.deck-reason { margin: 0; padding: 0 12px 8px 50px; font-size: 12.5px; line-height: 1.35; color: var(--foreground); max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.terminal-card.needs-you .deck-reason { background: color-mix(in srgb, var(--needs) 10%, var(--card)); }
+
+/* Focus: with two or more terminals, the one you type into stays bright and the rest fade (Rex: 1 · 0.75; inactive window 0.8 · 0.5).
+   Only the terminal text fades over its own background; headers keep full contrast so states stay readable. */
+#terminal-deck.has-focus:not(.single-terminal) .terminal-card:not(.is-focused) .terminal-surface { opacity: 0.75; }
+body.window-inactive #terminal-deck:not(.single-terminal) .terminal-card .terminal-surface { opacity: 0.5; }
+body.window-inactive #terminal-deck:not(.single-terminal) .terminal-card.is-focused .terminal-surface { opacity: 0.8; }
+#terminal-deck.has-focus:not(.single-terminal) .terminal-card.is-focused { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--primary) 55%, transparent), 0 4px 14px rgb(0 0 0 / 0.06); }
+#terminal-deck.has-focus:not(.single-terminal) .terminal-card.is-focused.needs-you { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--needs) 70%, transparent), 0 4px 14px color-mix(in srgb, var(--needs) 14%, transparent); }
+.deck-terminal .terminal-surface { transition: opacity 160ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .deck-terminal .terminal-surface { transition: none; } }
+
+/* The terminal fills the card down to its rounded edge; no stray strip under the last row. */
+.deck-terminal { padding: 10px 12px 0; border-radius: 0 0 12px 12px; }
+/* xterm 6 paints its viewport black past the last full row; match the terminal background instead. */
+.deck-terminal .xterm-viewport, #terminal-host .xterm-viewport { background: var(--terminal-bg) !important; scrollbar-width: thin; }
+.deck-terminal .terminal-surface, #terminal-host .terminal-surface { background: var(--terminal-bg); }
+
+/* World: filters with their names, smaller islands so every caption fits on a laptop screen. */
+.world-toolbar { padding: 0 24px 12px; }
+.world-filters { gap: 2px; padding: 2px; background: var(--control-fill); border-radius: 999px; flex-wrap: nowrap; }
+.world-filters .filter { height: 28px; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 500; gap: 6px; color: var(--muted-foreground); min-width: 0; }
+.world-filters .filter[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.06); }
+.world-filters .filter .icon { width: 15px; height: 15px; }
+.world-filters .filter-label { display: inline !important; }
+/* The pulse row above already shows these figures; the pills keep only their names. */
+.world-filters .filter-count { display: none; }
+.world-toolbar > .icon-button { width: 28px; height: 28px; min-height: 28px; }
+.world .island { border: 0; box-shadow: var(--card-shadow); background: var(--card); border-radius: 12px; }
+.world .scene { max-width: min(100%, 24rem); }
+.world.world-large .scene { max-width: min(100%, 40rem); }
+.world .island-caption .new-agent, .world .project-button, .island-agents .more-agents { min-height: 32px; }
+.world .island-caption .new-agent { width: 32px; height: 32px; }
+.project-button, .island-caption .new-agent, .agent-chip { min-height: 32px; min-width: 32px; }
+
+/* Team panel and conversation: the terminal is the work, the checkpoint is a side note. */
+.inspector { background: var(--background); border-left: 1px solid var(--hairline); }
+.inspector-heading { min-height: var(--toolbar-height); }
+/* Fixed width, not flex: a flexible inspector re-fits the embedded browser in a loop. */
+.agent-focused .inspector.has-agent { --panel-width: max(29rem, calc(100vw - var(--sidebar-width) - clamp(17rem, 24vw, 23rem))); }
+body.sidebar-hidden.agent-focused:not([data-nav="top"]) .inspector.has-agent { --panel-width: max(29rem, calc(100vw - clamp(17rem, 24vw, 23rem))); }
+#agent-checkpoints { margin: 14px; width: calc(100% - 28px); padding: 14px; border: 0; box-shadow: var(--card-shadow); border-radius: 12px; }
+.agent-top { min-height: var(--toolbar-height); }
+#composer { border: 0; border-radius: 12px; box-shadow: var(--card-shadow); }
+
+/* Settings fallback dialog (browser preview): grouped rows as in System Settings. */
+.settings-toggles { display: grid; gap: 1px; margin: 8px 0 14px; border-radius: 10px; overflow: hidden; background: var(--hairline); }
+.settings-toggles button { display: flex; align-items: center; gap: 8px; justify-content: flex-start; border-radius: 0; background: var(--card); height: 36px; padding: 0 12px; }
+.settings-toggles button.enabled { color: var(--signal-ready); font-weight: 600; }
+
+/* Narrow windows: the sidebar collapses to the toggle; content keeps its own padding. */
+@media (max-width: 800px) {
+  .workspace { display: flex; flex-direction: column; }
+  .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--hairline); }
+  .sidebar-scroll { max-height: 40vh; }
+  #pulse-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .world-filters { flex-wrap: wrap; border-radius: 14px; }
+  #terminal-deck { padding-inline: 12px; }
+  .world-heading, .terminal-board-heading, .world-toolbar, #world-pulse { padding-inline: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .sidebar, .terminal-card .deck-close { transition: none; } }
+
+/* Icons: Lucide glyphs at one stroke weight everywhere; vendor marks keep their official shapes and colours. */
+svg.icon { stroke-width: 1.75; }
+.brand-logo { width: 18px; height: 18px; flex-shrink: 0; display: block; }
+svg.brand-logo { fill: currentColor; }
+.avatar { background: var(--secondary); color: var(--foreground); }
+.avatar.claude, .avatar.codex, .avatar.gemini { background: color-mix(in srgb, var(--foreground) 5%, var(--card)); }
+.avatar .brand-logo { width: 18px; height: 18px; }
+.engine-card .avatar .brand-logo { width: 22px; height: 22px; }
+/* Logos never animate: only the state glyph shows that a terminal is working. */
+.avatar .brand-logo { animation: none !important; }
+.terminals-view:not(.motion-paused) .terminal-card[data-activity=working] .deck-state .icon { animation: deck-spin 1.2s linear infinite; }
+@keyframes deck-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { .terminal-card .deck-state .icon { animation: none !important; } }
+.profile-row { display: flex; align-items: center; gap: 10px; }
+.profile-row > div { flex: 1; min-width: 0; }
+.profile-row .avatar { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+/* ── Glass interface style (Settings → General → Estilo → Cristal), after Rex's Glass panes ──
+   The whole window blurs (HUD material in the app). Content and inspector float as rounded panes with a tinted
+   fill and Rex's double edge: a 0.7px inner highlight and a 1px outer shadow line. The pane you work in keeps
+   full contrast; the other recedes. Cards inside a pane are a second, lighter layer of glass. */
+:root[data-style="glass"] {
+  --glass-pane: color-mix(in srgb, var(--background) 62%, transparent);
+  --glass-pane-active: color-mix(in srgb, var(--background) 78%, transparent);
+  --glass-card: color-mix(in srgb, var(--card) 72%, transparent);
+  --glass-edge: inset 0 0 0 0.7px rgb(255 255 255 / 0.35), 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 24px rgb(0 0 0 / 0.06);
+  --glass-edge-card: inset 0 0 0 0.7px rgb(255 255 255 / 0.4), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+}
+@media (prefers-color-scheme: dark) { :root[data-style="glass"]:not([data-mode="light"]) {
+  --glass-pane: color-mix(in srgb, var(--background) 45%, transparent);
+  --glass-pane-active: color-mix(in srgb, var(--background) 62%, transparent);
+  --glass-card: color-mix(in srgb, var(--card) 55%, transparent);
+  --glass-edge: inset 0 0 0 0.7px rgb(255 255 255 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.45), 0 10px 30px rgb(0 0 0 / 0.25);
+  --glass-edge-card: inset 0 0 0 0.7px rgb(255 255 255 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.4);
+} }
+:root[data-style="glass"][data-mode="dark"] {
+  --glass-pane: color-mix(in srgb, var(--background) 45%, transparent);
+  --glass-pane-active: color-mix(in srgb, var(--background) 62%, transparent);
+  --glass-card: color-mix(in srgb, var(--card) 55%, transparent);
+  --glass-edge: inset 0 0 0 0.7px rgb(255 255 255 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.45), 0 10px 30px rgb(0 0 0 / 0.25);
+  --glass-edge-card: inset 0 0 0 0.7px rgb(255 255 255 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.4);
+}
+:root[data-style="glass"] body, :root[data-style="glass"] #app, :root[data-style="glass"] .workspace { background: transparent; }
+/* Outside the app there is no window blur; a soft field stands in for the desktop so previews show the panes. */
+:root[data-style="glass"]:not(.is-app) body { background: radial-gradient(120% 90% at 10% 0%, #b9d3c4 0%, transparent 55%), radial-gradient(90% 80% at 100% 100%, #c9c2e0 0%, transparent 60%), #dfe3e6; }
+@media (prefers-color-scheme: dark) { :root[data-style="glass"]:not(.is-app):not([data-mode="light"]) body { background: radial-gradient(120% 90% at 10% 0%, #23413a 0%, transparent 55%), radial-gradient(90% 80% at 100% 100%, #2c2546 0%, transparent 60%), #111417; } }
+:root[data-style="glass"][data-mode="dark"]:not(.is-app) body { background: radial-gradient(120% 90% at 10% 0%, #23413a 0%, transparent 55%), radial-gradient(90% 80% at 100% 100%, #2c2546 0%, transparent 60%), #111417; }
+:root[data-style="glass"] .sidebar { background: transparent; border-color: transparent; }
+:root[data-style="glass"] .workspace { gap: 8px; padding: 0 8px 8px; }
+:root[data-style="glass"] body[data-nav="left"] .workspace, :root[data-style="glass"] body[data-nav="right"] .workspace { padding-top: 8px; }
+:root[data-style="glass"] .main-pane, :root[data-style="glass"] .inspector {
+  background: var(--glass-pane); border: 0; border-radius: 10px; box-shadow: var(--glass-edge); overflow: hidden;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+:root[data-style="glass"] .main-pane.is-active-pane, :root[data-style="glass"] .inspector.is-active-pane { background: var(--glass-pane-active); }
+:root[data-style="glass"] .main-pane:not(.is-active-pane) > *, :root[data-style="glass"] .inspector:not(.is-active-pane) > * { opacity: 0.8; transition: opacity var(--dur-fast) var(--ease-out); }
+:root[data-style="glass"] body.window-inactive .main-pane > *, :root[data-style="glass"] body.window-inactive .inspector > * { opacity: 0.7; }
+:root[data-style="glass"] .terminal-card, :root[data-style="glass"] #situation, :root[data-style="glass"] .world .island,
+:root[data-style="glass"] #agent-checkpoints, :root[data-style="glass"] #composer { background: var(--glass-card); box-shadow: var(--glass-edge-card); }
+:root[data-style="glass"] .terminal-card.needs-you { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--needs) 60%, transparent), var(--glass-edge-card); }
+:root[data-style="glass"] .terminal-card.needs-you .deck-heading, :root[data-style="glass"] .terminal-card.needs-you .deck-reason { background: color-mix(in srgb, var(--needs) 14%, transparent); }
+:root[data-style="glass"] .terminal-keys, :root[data-style="glass"] .agent-top, :root[data-style="glass"] .agent-meta { background: transparent; }
+:root[data-style="glass"] .sidebar-search, :root[data-style="glass"] .world-filters, :root[data-style="glass"] body[data-nav="top"] .view-switch.sidebar-group { background: color-mix(in srgb, var(--foreground) 8%, transparent); }
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-style="glass"] { --glass-pane: var(--background); --glass-pane-active: var(--background); --glass-card: var(--card); }
+}
+
+/* Dialogs float over the app instead of replacing it: the page stays visible behind a light dim, as macOS sheets do.
+   0.18 hid #app while a dialog was open (body.*-dialog-open); the dim keeps context without repainting a blur. */
+body.search-dialog-open #app, body.launch-dialog-open #app, body.project-dialog-open #app { visibility: visible; }
+body.operations-dialog-open .workspace { visibility: visible; }
+dialog::backdrop { background: rgb(15 18 17 / 0.22); }
+@media (prefers-color-scheme: dark) { dialog::backdrop { background: rgb(0 0 0 / 0.45); } }
+:root[data-mode="dark"] dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+
+@media (max-width: 800px) { .pulse-stat:nth-child(3)::before { display: none; } }
+
+/* Inspector row lists: one column exactly as wide as the panel. With the grid's implicit auto column, a long
+   agent name (nowrap) widened the column past the panel and pushed the state label ("Bloqueado") out of view. */
+#attention-list, #team-list { grid-template-columns: minmax(0, 1fr); }
+.team-agent { min-width: 0; }
+#team-view { overflow-x: hidden; overscroll-behavior: contain; }
+
+/* Menus (every details.control-menu): an NSMenu look. Translucent panel, 0.5px edge, 24px rows, the
+   highlighted row in the system accent with white text, a check column for choices, hairline separators. */
+:root { --menu-highlight: #0a84ff; --menu-highlight-text: #fff; }
+/* The highlight follows the system accent; its text stays white, as in macOS menus (AccentColorText resolves to black in WebKit). */
+@supports (color: AccentColor) { html.is-app { --menu-highlight: AccentColor; } }
+.control-menu > .menu-items {
+  z-index: 60; gap: 0; padding: 5px; min-width: 220px; border: 0; border-radius: 10px;
+  background: color-mix(in srgb, var(--popover) 90%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--foreground) 18%, transparent), 0 10px 30px rgb(0 0 0 / 0.2), 0 2px 6px rgb(0 0 0 / 0.08);
+}
+.control-menu > .menu-items button, .control-menu > .menu-items [role^=menuitem], #mode-controls button {
+  min-height: 24px; height: 24px; padding: 0 10px 0 8px; gap: 6px; border: 0; border-radius: 5px; box-shadow: none;
+  background: transparent; color: var(--popover-foreground); font-size: 13px; font-weight: 400; white-space: nowrap;
+}
+.control-menu > .menu-items button:hover, .control-menu > .menu-items button:focus-visible,
+.control-menu > .menu-items [role^=menuitem]:hover, .control-menu > .menu-items [role^=menuitem]:focus-visible {
+  background: var(--menu-highlight); color: var(--menu-highlight-text); outline: 0; box-shadow: none;
+}
+.control-menu > .menu-items button:hover .icon, .control-menu > .menu-items button:focus-visible .icon { color: currentColor; }
+.control-menu > .menu-items button .icon { width: 14px; height: 14px; }
+.menu-check { padding-left: 4px; }
+.menu-check-mark { width: 16px; display: inline-flex; justify-content: center; flex-shrink: 0; }
+.menu-check-mark .icon { width: 13px !important; height: 13px !important; stroke-width: 2.4; }
+.menu-check[aria-checked="false"] .menu-check-mark { visibility: hidden; }
+.menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.control-menu > .menu-items .menu-note { margin: 0; padding: 2px 10px 4px 26px; font-size: 11px; line-height: 1.35; color: var(--muted-foreground); white-space: normal; max-width: 260px; }
+.control-menu > .menu-items .menu-note:empty { display: none; }
+.menu-separator { height: 1px; border: 0; margin: 5px 9px; background: color-mix(in srgb, var(--foreground) 12%, transparent); }
+.control-menu > .menu-items label { padding: 4px 10px 2px; font-size: 11px; font-weight: 600; }
+.control-menu > .menu-items select { height: 26px; padding: 0 8px; margin: 0 5px 4px; width: calc(100% - 10px); font-size: 13px; border-radius: 6px; }
+
+/* Workspace pop-up button: icon, current choice and the up-down chevron of an NSPopUpButton. */
+#workspace-menu > summary { gap: 6px; height: 28px; min-height: 28px; padding: 0 6px 0 8px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--foreground); }
+#workspace-menu > summary .icon { width: 15px; height: 15px; color: var(--muted-foreground); }
+#workspace-menu > summary .icon:last-child { width: 12px; height: 12px; }
+#workspace-menu > summary:hover { background: var(--hover-fill); }
+#workspace-menu[open] > summary { background: var(--selected-fill); }
+#workspace-current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#workspace-menu > .menu-items { min-width: 240px; }
+body[data-nav="top"] #sidebar-workspace #workspace-menu .menu-items { inset: calc(100% + 6px) auto auto 0; }
+
+/* Controls on the Mac: the arrow cursor (the hand is for links), a pressed state, no hover on disabled controls. */
+html.is-app :is(button, summary, label, select, [role=button], [role^=menuitem], .pulse-stat) { cursor: default; }
+html.is-app a[href] { cursor: pointer; }
+button:not(:disabled):active:not(.primary) { background: var(--selected-fill); }
+button.primary:not(:disabled):active { filter: brightness(0.92); }
+button:disabled, button:disabled:hover { background-color: transparent; cursor: default; opacity: 0.45; }
+button.primary:disabled, button.primary:disabled:hover { background-color: var(--primary); }
+.control-menu > .menu-items { max-height: calc(100vh - 7rem); overflow: auto; overscroll-behavior: contain; }
+
+/* Sidebar head (left and right layouts): no app name, only the collapse button, right after the traffic lights so it
+   does not move when the sidebar collapses (its collapsed position is the same 84px). */
+html.is-app body:not([data-nav="top"]) .sidebar-head .brand { display: none; }
+html.is-app body[data-nav="right"] .sidebar-head { justify-content: flex-end; }
+/* Toolbar Settings button: icon only, after the search field. */
+body[data-nav="top"] .sidebar-foot #settings { order: 5; margin-left: 2px; color: var(--muted-foreground); }
+body[data-nav="top"] .sidebar-foot #settings:hover { color: var(--foreground); }
+body[data-nav="top"] .sidebar-foot #settings .icon { width: 17px; height: 17px; color: currentColor; }
+
+/* Agents in an island: overlapping marks of the tools they run, each cut out of the row with a ring of its background. */
+/* Island rows: a fixed 34px leading slot keeps every name on the same line whatever the number of marks. */
+.island-lead { width: 34px; flex-shrink: 0; display: inline-flex; align-items: center; margin-left: -2px; }
+.island-lead > .icon { width: 16px; height: 16px; margin-left: 1px; color: var(--muted-foreground); }
+.project-row .project-dot { margin: 0 2px 0 4px; }
+.agent-stack { display: inline-flex; align-items: center; flex-shrink: 0; }
+.stack-logo { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; background: var(--card); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--secondary) 55%, var(--background)); }
+html.is-app .stack-logo { box-shadow: 0 0 0 1.5px var(--background); }
+.stack-logo + .stack-logo { margin-left: -10px; }
+.stack-logo .brand-logo, .stack-logo .icon { width: 12px; height: 12px; }
+.stack-more { margin-left: 2px; font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+
+/* Glass with vertical tabs: the panes sit 8px in from the window, but the transparent sidebar keeps its head flush
+   with the window top so the collapse button lines up with the traffic lights. */
+:root[data-style="glass"] body[data-nav="left"] .sidebar { margin: -8px 0 0 -8px; }
+:root[data-style="glass"] body[data-nav="right"] .sidebar { margin: -8px -8px 0 0; }
+/* The most urgent agent comes first in the stack, so it is drawn on top. */
+.stack-logo { position: relative; }
+.stack-logo:nth-child(1) { z-index: 3; } .stack-logo:nth-child(2) { z-index: 2; } .stack-logo:nth-child(3) { z-index: 1; }
