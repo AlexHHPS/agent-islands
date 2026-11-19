@@ -14,7 +14,7 @@ try{
  await page.locator('[data-agent-id=c] .deck-pin').click();assert.deepEqual(await order(),['c','a','b']);assert.equal(await page.locator('[data-agent-id=c] .deck-pin').getAttribute('aria-pressed'),'true');
  assert(await page.evaluate(()=>deckTerminals.get('c').term===originalTerminal));assert.equal(await page.evaluate(()=>originalTerminal.buffer.active.getLine(0).translateToString(true)),'Keep terminal output');
  await page.locator('[data-agent-id=b] .deck-pin').focus();await page.keyboard.press('Enter');assert.deepEqual(await order(),['b','c','a']);
- await page.locator('#terminal-project').selectOption('p');assert.deepEqual(await order(),['b','a']);await page.locator('#terminal-project').selectOption('');assert.deepEqual(await order(),['b','c','a']);
+ if(!await page.locator('#terminal-project').isVisible())await page.locator('#terminal-menu summary').click();await page.locator('#terminal-project').selectOption('p');assert.deepEqual(await order(),['b','a']);if(!await page.locator('#terminal-project').isVisible())await page.locator('#terminal-menu summary').click();await page.locator('#terminal-project').selectOption('');assert.deepEqual(await order(),['b','c','a']);
  await page.locator('[data-agent-id=b] .deck-pin').click();assert.deepEqual(await order(),['c','a','b']);
  await page.evaluate(()=>I18n.setLanguage('en'));assert.equal(await page.locator('[data-agent-id=c] .deck-pin').getAttribute('aria-label'),'Unpin terminal');
  await page.reload();await page.evaluate(data=>{data.agents[2].id='reopened';receiveNative({event:'snapshot',data});setView('terminals')},structuredClone(snapshot));assert.deepEqual(await order(),['reopened','a','b'],'Pins persist by conversation, including a new process identity');

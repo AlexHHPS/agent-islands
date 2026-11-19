@@ -18,7 +18,7 @@ Use existing type, space, radius, motion and color tokens. SVG geometry and the 
 
 ## Layout and interaction
 
-The world is a project canvas with an agent/terminal inspector. Opening an agent enlarges its island and makes its checkpoints available alongside the terminal. The controlled browser can occupy that same contextual side of the workspace. Visual references stay in the draft until the user sends them.
+Terminales opens to the live terminal grid, with a compact Pulse widget next to the view controls. Mundo is the island canvas and lists agents in a separate team sidebar. An individual agent opens with a checkpoint panel beside its terminal. The controlled browser can occupy the checkpoint side. Visual references stay in the draft until the user sends them.
 
 Keep empty, loading, error, unavailable and stale states distinguishable. Respect reduced motion, visible keyboard focus and contrast. Dense desktop layouts should use additional space for context rather than stretching prose.
 

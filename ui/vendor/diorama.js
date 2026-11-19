@@ -982,9 +982,11 @@ var Diorama = (function () {
       var s = ''; for (var i = 0; i < its.length; i++) s += its[i].m.id + ',';
       if (s === seq[name]) return;
       seq[name] = s;
-      var frag = document.createDocumentFragment(); for (var j = 0; j < its.length; j++) frag.appendChild(its[j].g);
-      while (host.firstChild) host.removeChild(host.firstChild);
-      host.appendChild(frag);
+      /* Agent Islands: move only the groups that changed place. Rebuilding the whole host re-inserted every
+         group on each frame a robot walked, and each insertion restyles its subtree. */
+      var ref = host.firstChild;
+      for (var j = 0; j < its.length; j++) { var g = its[j].g; if (g === ref) ref = ref.nextSibling; else host.insertBefore(g, ref); }
+      while (ref) { var next = ref.nextSibling; host.removeChild(ref); ref = next; }
     }
     this.setWobble = function (unitsPerPx) { wobAmp = (theme.wobble || 0) * unitsPerPx; };
     this.shadowOpacity = function () { shadowG.setAttribute('opacity', theme.shadow == null ? .2 : theme.shadow); };

@@ -88,6 +88,10 @@ It downloads a pinned Node runtime, verifies its SHA-256 against [committed chec
 
 ### First run
 
+The terminal board includes **Create view / Crear vista**: name a selection of open conversations and return to it from the view selector. One terminal fills the work area, two sit side by side, and larger selections use a grid. Views and pins persist by conversation identity and stay scoped to the active workspace. Closing a terminal from its card or inspector uses the native confirmation, stops its owned PTY, removes the card and returns to the board; saved provider history remains available.
+
+The attention counter tracks explicit blocked/limited goals and pending questions or approvals. An open shell, an idle/finished turn, a generic notification or an old `waiting` label alone does not count as a request for action.
+
 Choose **Castellano** or **English** under the settings button → **Application language / Idioma de la aplicación**. Your choice is saved and applies immediately. The native app initially follows the Mac's preferred language, falling back to English.
 
 1. Add a project directory. Its island appears in the workspace.

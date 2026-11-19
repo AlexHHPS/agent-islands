@@ -8,7 +8,7 @@ try{
  await page.addInitScript(()=>{window.messages=[];window.webkit={messageHandlers:{native:{postMessage:m=>messages.push(m)}}}});
  await page.goto(pathToFileURL(resolve('ui/index.html')).href);
  const profiles=[{id:'claude',name:'Claude Code',harness:'claude',configRoot:'/profiles/default',executable:'/bin/claude'},{id:'claude-personal',name:'Claude Personal',harness:'claude',configRoot:'/profiles/personal',executable:'/bin/claude'},{id:'codex',name:'Codex',harness:'codex',configRoot:'/profiles/codex',executable:'/bin/codex',sharedServer:false}];
- await page.evaluate(profiles=>{receiveNative({event:'snapshot',data:{native:true,projects:[{id:'p',name:'Portal',path:'/tmp/portal'}],agents:[{id:'one',projectId:'p',name:'Acceso',harness:'claude',profileId:'claude-personal',profileName:'Claude Personal',threadId:'thread',managed:true,processRunning:true,state:'active'}],profiles,binaries:{claude:'/bin/claude',codex:'/bin/codex'},docker:{containers:[]}}});aiAuto=false;launchDialog('p','claude','claude-personal')},profiles);
+ await page.evaluate(profiles=>{receiveNative({event:'snapshot',data:{native:true,projects:[{id:'p',name:'Portal',path:'/tmp/portal'}],agents:[{id:'one',projectId:'p',name:'Acceso',harness:'claude',profileId:'claude-personal',profileName:'Claude Personal',threadId:'thread',managed:true,processRunning:true,state:'active'}],profiles,binaries:{claude:'/bin/claude',codex:'/bin/codex'},docker:{containers:[]}}});launchDialog('p','claude','claude-personal')},profiles);
  assert.equal(await page.locator('#launch-profile').inputValue(),'claude-personal');await page.locator('[data-launch-mode=resume]').click();
  const first=await page.evaluate(()=>messages.filter(m=>m.action==='listSessions').at(-1));assert.equal(first.profileId,'claude-personal');
  await page.locator('#launch-profile').selectOption('claude');
@@ -17,7 +17,7 @@ try{
  await page.locator('#launch-dialog .close-dialog').first().click();await page.evaluate(()=>selectAgent('one'));
  await page.evaluate(()=>receiveNative({event:'checkpointsLoaded',data:{records:{'["claude-personal","/tmp/portal","thread"]':[{summary:'Avance personal',headline:'Acceso más sencillo',changes:['Recuperación de cuenta'],generatedAt:Date.now()/1000,capturedAt:Date.now()/1000,source:'Test'}]}}}));
  assert((await page.locator('#checkpoint-content').textContent()).includes('Avance personal'));
- await page.locator('#open-operations').click();assert(await page.locator('#operations-dialog').isVisible());
+ await page.locator('#tools-menu summary').click();await page.locator('#open-operations').click();assert(await page.locator('#operations-dialog').isVisible());
  const data={environments:[{id:'env',name:'Dev',projectId:'p',origin:'https://dev.example.test'}],recipes:[{id:'journey',name:'Recuperar cuenta',environmentId:'env'}],runs:[],leases:[],auth:[],logins:[],incidents:[],installations:[]};
  await page.evaluate(data=>receiveNative({event:'operationsResult',data:{method:'snapshot',result:data}}),data);
  assert.equal(await page.locator('#qa-profile').inputValue(),'claude-personal');
@@ -32,8 +32,10 @@ try{
  await page.locator('[data-operations-tab=environments]').click();await page.locator('#environment-name').fill('Review');await page.locator('#environment-origin').fill('https://review.example.test');await page.locator('#environment-form button[type=submit]').click();assert(await page.evaluate(()=>messages.some(m=>m.method==='environment.save'&&m.params.projectPath==='/tmp/portal')));
  await page.locator('[data-operations-tab=health]').click();await page.evaluate(()=>receiveNative({event:'operationsResult',data:{method:'health',result:{node:'v24',browserAvailable:true,checkedAt:Date.now()/1000}}}));assert((await page.locator('#operations-body').textContent()).includes('Chromium preparado'));
  await page.locator('[data-operations-tab=ai]').click();
- assert.equal(await page.evaluate(()=>aiAuto),false,'Automatic context sharing starts disabled');
- assert.equal(await page.locator('#ai-keychain').isDisabled(),true);
+ assert.equal(await page.evaluate(()=>messages.filter(m=>m.action==='intelligence').length),0,'Context is shared only after a summary is requested');
+ assert(await page.locator('#ai-keychain').isHidden());
+ await page.locator('[data-ai-source=custom]').click();
+ await page.locator('#ai-advanced summary').click();
  await page.locator('#ai-endpoint').fill('https://summary.example.test/v1/chat/completions');
  await page.locator('#ai-model').fill('fixture-model');await page.locator('#ai-requires-key').check();
  await page.locator('#ai-settings-form button[type=submit]').click();

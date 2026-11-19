@@ -24,7 +24,7 @@ if let index = CommandLine.arguments.firstIndex(of: "--event"), CommandLine.argu
         payload = (try? JSONSerialization.jsonObject(with: bytes)) ?? [:]
     }
     try? fm.createDirectory(at: eventDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-    let allowed: Set<String> = ["agent_id", "agent_type", "hook_event_name", "tool_name", "last_assistant_message", "last-assistant-message", "message", "thread-id", "session_id", "islands_mode"]
+    let allowed: Set<String> = ["agent_id", "agent_type", "hook_event_name", "tool_name", "notification_type", "last_assistant_message", "last-assistant-message", "message", "thread-id", "session_id", "islands_mode"]
     var safePayload = (payload as? [String: Any] ?? [:]).filter { allowed.contains($0.key) }
     // The app keeps at most 12,000 characters and discards oversized event files.
     for (key, value) in safePayload { if let text = value as? String, text.count > 16_000 { safePayload[key] = String(text.prefix(16_000)) } }
@@ -61,6 +61,10 @@ struct Agent: Codable {
     var threadId: String? = nil
     var goalStatus: String? = nil
     var goalRawStatus: String? = nil
+    var interactionKind: String? = nil
+    var interactionSource: String? = nil
+    var interactionAt: Double? = nil
+    var closedAt: Double? = nil
     var stateAt: Double? = nil
     var goalUpdatedAt: Double? = nil
     var goalObjective: String? = nil
@@ -68,6 +72,7 @@ struct Agent: Codable {
     var tokensUsed: Int? = nil
     var lastTask: String? = nil
     var taskAt: Double? = nil
+    var terminalInputAt: Double? = nil
     var lastResponse: String? = nil
     var responseAt: Double? = nil
     var pendingContext: String? = nil
@@ -150,6 +155,7 @@ if CommandLine.arguments.contains("--self-test") {
         AppLanguage.set("es", persist: false)
         localizationSelfTests()
         agentStateSelfTests()
+        terminalOutputSelfTests()
         try aiConfigurationSelfTests()
         try Data().write(to: root.appendingPathComponent("safe.txt"))
         _ = try confinedURL(root: root.path, relative: "safe.txt")
@@ -215,6 +221,7 @@ final class Session {
     let process = Process()
     let input = Pipe()
     let output = Pipe()
+    var columns = 90, rows = 28
     var history = Data()
     var lastBell = Date.distantPast
     var stopped = false
@@ -263,6 +270,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var launched = false
     var startupResumeHandled = false
     var pageReady = false
+    let terminalOutput = TerminalOutputBatcher()
+    var checkpointEvidence: [String: Double] = [:]
     var aiTask: URLSessionDataTask?
     var aiGeneration = 0
     var aiCredential: String?
@@ -309,6 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         window.center()
         window.setFrameAutosaveName("islands-main")
         window.makeKeyAndOrderFront(nil)
+        NotificationCenter.default.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self] _ in self?.windowVisibilityChanged() }
         NSApp.activate(ignoringOtherApps: true)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: "Agent Islands")
@@ -378,6 +388,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             edit.addItem(withTitle: title, action: Selector(selector), keyEquivalent: key)
         }
         editItem.submenu = edit; bar.addItem(editItem); NSApp.mainMenu = bar
+    }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        // The interface process can be killed by memory pressure or a hang; agents live here, so reload the
+        // interface and let it replay every terminal from history rather than leaving a blank window.
+        NSLog("Agent Islands: interface process ended; reloading")
+        pageReady = false
+        webView.reload()
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         pageReady = true
@@ -518,7 +535,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 try? Data("external-update".utf8).write(to: smokeFile, options: .atomic)
                 self.web.evaluateJavaScript("document.querySelector('#code').value='stale-overwrite';document.querySelector('#code').dispatchEvent(new Event('input'));document.querySelector('#save-file').click()", completionHandler: nil)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+            var closePassed = false, closeStopped = false, closeBoard = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+                if let id = try? self.launch(project, harness: "shell", executable: "/bin/cat", args: [], name: "Close fixture") {
+                    self.closeManagedSession(id)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        let removed = self.sessions[id] == nil && self.agents[id]?.closedAt != nil; closeStopped = removed
+                        self.web.evaluateJavaScript("view==='terminals' && !deckTerminals.has(" + jsonString(id) + ")") { result, _ in closeBoard = result as? Bool == true; closePassed = removed && closeBoard }
+                    }
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 9) {
                 let passed = self.sessions.values.contains { String(decoding: $0.history, as: UTF8.self).contains("native-bridge-ñ") }
                 let conflictPassed = (try? String(contentsOf: smokeFile, encoding: .utf8)) == "external-update"
                 let spyArgs = (try? String(contentsOf: spyOutput, encoding: .utf8)) ?? ""
@@ -528,7 +555,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 let dockerCalls = (try? String(contentsOf: dockerOutput, encoding: .utf8)) ?? ""
                 let dockerPassed = ["start", "stop", "restart"].allSatisfy { dockerCalls.contains("container\n" + $0 + "\nsmoke-container\n") }
                 let ledgerPassed = goalLedgerSmokeTests(self, directory: fixture)
-                let report = (passed ? "PASS native WKWebView + PTY bridge" : "FAIL native bridge") + "\n" + (savePassed && conflictPassed ? "PASS native editor read/write and stale-save rejection" : "FAIL native editor") + "\n" + (contextPassed && busyGuardPassed ? "PASS native context attribution, timestamps, task preservation and busy guard" : "FAIL native context") + "\n" + (resumePassed ? "PASS resumed conversation and bypass argv through native PTY" : "FAIL resume argv") + "\n" + (dockerPassed ? "PASS Docker start/stop/restart through native bridge with isolated executable" : "FAIL Docker actions")
+                let report = (closePassed ? "PASS native close terminates the PTY, retires the terminal and returns to the mosaic" : "FAIL native close lifecycle stopped=\(closeStopped) board=\(closeBoard)") + "\n" + (passed ? "PASS native WKWebView + PTY bridge" : "FAIL native bridge") + "\n" + (savePassed && conflictPassed ? "PASS native editor read/write and stale-save rejection" : "FAIL native editor") + "\n" + (contextPassed && busyGuardPassed ? "PASS native context attribution, timestamps, task preservation and busy guard" : "FAIL native context") + "\n" + (resumePassed ? "PASS resumed conversation and bypass argv through native PTY" : "FAIL resume argv") + "\n" + (dockerPassed ? "PASS Docker start/stop/restart through native bridge with isolated executable" : "FAIL Docker actions")
                 try? Data((report + "\n" + (workspacePassed ? "PASS native multi-project workspace and additional directory argv" : "FAIL native workspace argv") + "\n" + (visualPassed ? "PASS native visual reference manifest and image paths delivered through harness PTY; foreign references rejected" : "FAIL native visual reference delivery") + "\n" + (ledgerPassed ? "PASS goal ledger stalled/progress/achieved, older schemas and empty versus unavailable ledger" : "FAIL goal ledger")).utf8).write(to: URL(fileURLWithPath: "/tmp/agent-islands-smoke-result.txt"))
                 self.web.takeSnapshot(with: nil) { image, error in
                     if let image, let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
@@ -562,9 +589,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }
         web?.evaluateJavaScript("window.receiveNative && window.receiveNative(\(json(["event": event, "data": data])))", completionHandler: nil)
     }
+    /// Sends queued PTY output as one message per session. Called about 30 times a second at most.
+    func flushTerminalOutput() {
+        for (id, bytes) in terminalOutput.drain() {
+            guard let session = sessions[id] else { continue }
+            emit("terminal", ["id": id, "bytes": bytes.base64EncodedString(), "cols": session.columns, "rows": session.rows])
+        }
+    }
+    /// A hidden window (display asleep, minimised, covered) receives no terminal output; on return each
+    /// session that produced output is replayed once from its bounded history instead of as a backlog.
+    func windowVisibilityChanged() {
+        let visible = window.occlusionState.contains(.visible)
+        if !visible { flushTerminalOutput() }
+        if pageReady { emit("windowVisibility", ["visible": visible]) }
+        for id in terminalOutput.setVisible(visible) {
+            guard let session = sessions[id] else { continue }
+            emit("terminalReplay", ["id": id, "bytes": session.history.base64EncodedString(), "cols": session.columns, "rows": session.rows])
+        }
+    }
     func publish() {
         for id in Array(agents.keys) where agents[id]?.managed == true { agents[id]?.processRunning = sessions[id]?.process.isRunning == true }
-        let data: [String: Any] = ["projects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(scopedProjects))) ?? [], "allProjects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projects))) ?? [], "projectWorkspaces": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projectWorkspaces))) ?? [], "activeWorkspaceId": activeWorkspaceId ?? "", "activeWorkspaceName": activeProjectWorkspace?.name ?? "", "backgroundSessionCount": agents.values.filter { $0.managed && !agentIsInScope($0) && sessions[$0.id]?.process.isRunning == true }.count, "agents": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(Array(agents.values).filter { agentIsInScope($0) }.sorted { $0.name < $1.name }))) ?? [], "binaries": binaries, "notifications": notifications, "voice": voice, "native": true, "docker": docker, "codexSharedServer": localCodexResumeEndpoint() != nil, "profiles": profiles.filter { $0.enabled }.map { profile -> [String: Any] in var row = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(profile))) as? [String: Any] ?? [:]; row["sharedServer"] = profile.harness == "codex" && localCodexResumeEndpoint(root: URL(fileURLWithPath: profile.configRoot)) != nil; return row }, "language": AppLanguage.current, "workspaceError": workspaceError ?? ""]
+        let data: [String: Any] = ["projects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(scopedProjects))) ?? [], "allProjects": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projects))) ?? [], "projectWorkspaces": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(projectWorkspaces))) ?? [], "activeWorkspaceId": activeWorkspaceId ?? "", "activeWorkspaceName": activeProjectWorkspace?.name ?? "", "backgroundSessionCount": agents.values.filter { $0.managed && !agentIsInScope($0) && sessions[$0.id]?.process.isRunning == true }.count, "agents": (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(Array(agents.values).filter { agentIsInScope($0) && $0.closedAt == nil && ($0.parentId.flatMap { agents[$0]?.closedAt } == nil) }.sorted { $0.name < $1.name }))) ?? [], "binaries": binaries, "notifications": notifications, "voice": voice, "native": true, "docker": docker, "codexSharedServer": localCodexResumeEndpoint() != nil, "profiles": profiles.filter { $0.enabled }.map { profile -> [String: Any] in var row = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(profile))) as? [String: Any] ?? [:]; row["sharedServer"] = profile.harness == "codex" && localCodexResumeEndpoint(root: URL(fileURLWithPath: profile.configRoot)) != nil; return row }, "checkpointEvidence": checkpointEvidence.filter { agents[$0.key].map(agentIsInScope) == true }, "language": AppLanguage.current, "workspaceError": workspaceError ?? ""]
         // Snapshots are frequent; write only the records that changed.
         if let workspace {
             for agent in agents.values where agent.managed {
@@ -574,11 +619,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 if (try? workspace.put("agent", id: agent.id, value: value)) != nil { persistedAgents[agent.id] = serialized }
             }
         }
-        let registry = agents.values.sorted { $0.id < $1.id }.map { ["id": $0.id, "profileId": $0.profileId ?? $0.harness, "threadId": $0.threadId ?? "", "projectId": $0.projectId, "projectIds": $0.executionProjectIds as Any? ?? NSNull()] as [String: Any] }
+        let registry = agents.values.filter { $0.closedAt == nil }.sorted { $0.id < $1.id }.map { ["id": $0.id, "profileId": $0.profileId ?? $0.harness, "threadId": $0.threadId ?? "", "projectId": $0.projectId, "projectIds": $0.executionProjectIds as Any? ?? NSNull()] as [String: Any] }
         let serializedRegistry = json(registry)
         if serializedRegistry != persistedRegistry, (try? Data(serializedRegistry.utf8).write(to: support.appendingPathComponent("qa/agents.json"), options: .atomic)) != nil { persistedRegistry = serializedRegistry }
         emit("snapshot", data)
-        let n = agents.values.filter { agentIsInScope($0) && AgentControlState($0).needsAttention }.count
+        let n = agents.values.filter { agentIsInScope($0) && $0.closedAt == nil && AgentControlState($0).needsAttention }.count
         statusItem?.button?.title = n > 0 ? " \(n)" : ""
     }
     func fail(_ error: Error) { emit("error", ["message": error.localizedDescription]) }
@@ -719,19 +764,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "select":
                 if let id = b["id"] as? String, let agent = agents[id] {
                     let target = agent.parentId ?? id; selectedAgent = target
+                    flushTerminalOutput()
                     emit("terminalReset", ["id": target, "bytes": sessions[target]?.history.base64EncodedString() ?? ""])
                 }
             case "replay":
-                if let id = b["id"] as? String, let session = sessions[id] { emit("terminalReplay", ["id": id, "bytes": session.history.base64EncodedString()]) }
+                if let id = b["id"] as? String, let session = sessions[id] { flushTerminalOutput(); emit("terminalReplay", ["id": id, "bytes": session.history.base64EncodedString(), "cols": session.columns, "rows": session.rows]) }
             case "input":
                 if let id = b["id"] as? String, let text = b["text"] as? String, text.utf8.count <= 1_048_576, let session = sessions[id] {
+                    let wasContinuable = agents[id]?.canContinueFromPulse == true
+                    if !text.isEmpty, let agent = agents[id], ["codex", "claude"].contains(agent.harness) {
+                        agents[id]?.terminalInputAt = Date().timeIntervalSince1970
+                    }
                     session.packet(68, Data(text.utf8))
-                    if text.contains("\r"), agents[id]?.state == "waiting" { agents[id]?.state = "session"; publish() }
+                    if text.contains("\r") || text.contains("\n") {
+                        agents[id]?.interactionKind = nil; agents[id]?.interactionSource = nil
+                        if agents[id]?.state == "waiting" { agents[id]?.state = "session" }
+                        publish()
+                    } else if wasContinuable {
+                        publish()
+                    }
                 }
             case "prompt":
                 if let id = b["id"] as? String, let rawText = b["text"] as? String, rawText.utf8.count <= 100_000, let session = sessions[id] {
                     do {
                     guard let agent = agents[id], agentIsInScope(agent) else { throw launchFailure(L("La conversación está fuera del workspace activo.")) }
+                    if b["contextKind"] as? String == "pulseContinue", !agent.canContinueFromPulse {
+                        throw launchFailure(L("El agente ya no está listo para continuar. Revisa la terminal."))
+                    }
                     let visualContext = try visualPromptContext(b["references"] as? [String] ?? [], owner: id)
                     let imageIDs = b["attachments"] as? [String] ?? []
                     guard imageIDs.allSatisfy({ attachments[$0] != nil }) else { throw launchFailure(L("Una imagen ya no está disponible. Adjúntala de nuevo.")) }
@@ -753,7 +812,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { session.packet(68, Data([13])) }
                     if kind == "status" || kind == "recap" { agents[id]?.pendingContext = kind }
                     else { agents[id]?.lastTask = String(rawText.prefix(4000)); agents[id]?.taskAt = Date().timeIntervalSince1970; agents[id]?.pendingContext = nil }
-                    agents[id]?.state = "active"; agents[id]?.stateAt = Date().timeIntervalSince1970; publish()
+                    agents[id]?.interactionKind = nil; agents[id]?.interactionSource = nil; agents[id]?.state = "active"; agents[id]?.stateAt = Date().timeIntervalSince1970; publish()
                     emit("promptAccepted", ["id": id, "requestId": b["requestId"] as? String ?? ""])
                     } catch { emit("promptRejected", ["id": id, "text": rawText, "requestId": b["requestId"] as? String ?? "", "message": error.localizedDescription]) }
                 } else {
@@ -762,12 +821,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             case "resize":
                 if let id = b["id"] as? String, let cols = b["cols"] as? Int, let rows = b["rows"] as? Int {
                     let c = min(500, max(10, cols)), r = min(300, max(4, rows))
+                    sessions[id]?.columns = c; sessions[id]?.rows = r
+                    emit("terminalGeometry", ["id": id, "cols": c, "rows": r])
                     sessions[id]?.packet(82, Data([UInt8(c >> 8), UInt8(c & 255), UInt8(r >> 8), UInt8(r & 255)]))
                 }
             case "stop":
-                if let id = b["id"] as? String, let session = sessions[id] {
+                if let id = b["id"] as? String, sessions[id] != nil {
                     let alert = NSAlert(); alert.messageText = L("¿Cerrar esta sesión?"); alert.informativeText = L("Se detendrá el agente y sus procesos. Su conversación seguirá en el historial del harness."); alert.addButton(withTitle: L("Cerrar sesión")); alert.addButton(withTitle: L("Cancelar"))
-                    if alert.runModal() == .alertFirstButtonReturn { session.stop() }
+                    if alert.runModal() == .alertFirstButtonReturn { closeManagedSession(id) } else { emit("sessionCloseCancelled", ["id": id]) }
+                }
+            case "terminalInteraction":
+                if let id = b["id"] as? String, let agent = agents[id], agent.managed, agent.closedAt == nil, agentIsInScope(agent), ["codex", "claude"].contains(agent.harness), sessions[id]?.process.isRunning == true {
+                    let kind = b["kind"] as? String
+                    if let kind, ["question", "approval"].contains(kind) { agents[id]?.interactionKind = kind; agents[id]?.interactionSource = "screen"; agents[id]?.interactionAt = Date().timeIntervalSince1970 }
+                    else if agents[id]?.interactionSource == "screen" { agents[id]?.interactionKind = nil; agents[id]?.interactionSource = nil }
+                    publish()
                 }
             case "scan": scan()
             case "docker": scanDocker()
@@ -858,7 +926,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let own = Bundle.main.executablePath!
         if harness == "claude" {
             var hooks: [String: Any] = [:]
-            for (event, state) in [("UserPromptSubmit", "active"), ("PreToolUse", "active"), ("PostToolUse", "active"), ("PermissionRequest", "waiting"), ("Notification", "waiting"), ("Stop", "ready"), ("StopFailure", "error"), ("SubagentStart", "subagent-start"), ("SubagentStop", "subagent-stop")] {
+            for (event, state) in [("UserPromptSubmit", "active"), ("PreToolUse", "active"), ("PostToolUse", "active"), ("PermissionRequest", "waiting"), ("Notification", "waiting"), ("Elicitation", "waiting"), ("ElicitationResult", "active"), ("Stop", "ready"), ("StopFailure", "error"), ("SubagentStart", "subagent-start"), ("SubagentStop", "subagent-stop")] {
                 let command = shellQuote(own) + " --event " + shellQuote(id) + " " + shellQuote(state)
                 hooks[event] = [["hooks": [["type": "command", "command": command, "timeout": 3]]]]
             }
@@ -906,7 +974,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 guard let self, let session else { return }
                 session.history.append(bytes)
                 if session.history.count > 1_048_576 { session.history.removeFirst(session.history.count - 1_048_576) }
-                self.emit("terminal", ["id": id, "bytes": bytes.base64EncodedString()])
+                if self.terminalOutput.add(id, bytes) { DispatchQueue.main.asyncAfter(deadline: .now() + 0.033) { self.flushTerminalOutput() } }
                 if let notice = session.signals.consume(bytes).first, Date().timeIntervalSince(session.lastBell) > 4 {
                     session.lastBell = Date()
                     // OSC/bell is a notification, not evidence of a blocker or a decision.
@@ -921,7 +989,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 self.agents[id]?.message = L("Sesión cerrada ({0}).", process.terminationStatus)
                 session?.output.fileHandleForReading.readabilityHandler = nil
                 for child in self.agents.values.filter({ $0.parentId == id }) { self.agents[child.id]?.state = "exited" }
-                self.publish()
+                let requested = session?.stopped == true
+                self.agents[id]?.interactionKind = nil; self.agents[id]?.interactionSource = nil
+                self.sessions.removeValue(forKey: id)
+                if self.selectedAgent == id { self.selectedAgent = nil }
+                self.publish(); self.emit("sessionEnded", ["id": id, "requested": requested])
             }
         }
         do { try session.process.run() } catch { sessions.removeValue(forKey: id); agents.removeValue(forKey: id); throw error }
@@ -999,6 +1071,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 guard let goals = self.readCodexGoalSnapshot(profileID: profile.id) else { return nil }; return (profile.id, goals)
             }
             let goals = snapshots.flatMap { $0.1 }
+            let qaRuns = self.qaRecords("run")
             DispatchQueue.main.async {
                 self.scanBusy = false
                 let live = Set(discovered.map { "external-\($0.0)" })
@@ -1023,7 +1096,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 var completedByProject: [String: Int] = [:]
                 for goal in goals {
                     guard let thread = goal["thread_id"], let cwd = goal["cwd"], goal["objective"] != nil else { continue }
-                    let managedIds = self.agents.values.filter { $0.managed && ($0.profileId ?? $0.harness) == (goal["profileId"] ?? "codex") && $0.threadId == thread }.map { $0.id }.sorted()
+                    if self.agents.values.contains(where: { $0.managed && $0.closedAt != nil && ($0.profileId ?? $0.harness) == (goal["profileId"] ?? "codex") && $0.threadId == thread }) && !self.agents.values.contains(where: { $0.managed && $0.closedAt == nil && self.sessions[$0.id]?.process.isRunning == true && ($0.profileId ?? $0.harness) == (goal["profileId"] ?? "codex") && $0.threadId == thread }) { continue }
+                    let managedIds = self.agents.values.filter { $0.managed && $0.closedAt == nil && self.sessions[$0.id]?.process.isRunning == true && ($0.profileId ?? $0.harness) == (goal["profileId"] ?? "codex") && $0.threadId == thread }.map { $0.id }.sorted()
                     let managedId = managedIds.first
                     let existing = matchingProject(cwd, in: self.projects)
                     let projectId = existing?.id ?? "observed-" + cwd
@@ -1040,6 +1114,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     for target in managedIds.isEmpty ? [id] : managedIds {
                         self.agents[target]?.threadId = thread
                         self.agents[target]?.applyGoal(goal)
+                    }
+                }
+                self.checkpointEvidence = self.agents.values.reduce(into: [:]) { updates, agent in
+                    if let finished = self.qaEvidence(agent, runs: qaRuns).compactMap({ $0["finishedAt"] as? Double }).max() {
+                        updates[agent.id] = finished
                     }
                 }
                 self.publish()
@@ -1145,8 +1224,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             if payload["tool_name"] as? String == "EnterPlanMode" { agents[id]?.mode = "plan" }
             if payload["tool_name"] as? String == "ExitPlanMode", payload["hook_event_name"] as? String == "PostToolUse" { agents[id]?.mode = "work" }
             if let mode = payload["islands_mode"] as? String, ["plan", "goal", "work"].contains(mode) { agents[id]?.mode = mode }
-            let needsQuestion = payload["tool_name"] as? String == "AskUserQuestion" && payload["hook_event_name"] as? String == "PreToolUse"
-            agents[id]?.state = needsQuestion ? "waiting" : state
+            let interaction = confirmedHookInteraction(payload)
+            if payload["hook_event_name"] as? String == "Notification", interaction == nil { continue }
+            let needsQuestion = interaction == "question"
+            agents[id]?.interactionKind = interaction; agents[id]?.interactionSource = interaction == nil ? nil : "hook"; agents[id]?.interactionAt = interaction == nil ? nil : eventAt
+            agents[id]?.state = interaction != nil ? "waiting" : state == "waiting" ? "session" : state
             agents[id]?.stateAt = eventAt
             if needsQuestion, let questions = payload["questions"] as? [[String: Any]], let question = questions.first?["question"] as? String { agents[id]?.message = question }
             if !text.isEmpty { agents[id]?.message = String(text.prefix(12_000)) }
@@ -1156,7 +1238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                     agents[id]?.contextKind = kind; agents[id]?.contextResponse = String(text.prefix(12_000)); agents[id]?.contextAt = Date().timeIntervalSince1970; agents[id]?.pendingContext = nil
                 }
             }
-            if needsQuestion || state == "waiting" || state == "ready" || state == "error" {
+            if interaction != nil || state == "ready" || state == "error" {
                 let brief = text.isEmpty ? (state == "waiting" ? L("Necesito tu atención.") : L("He terminado mi turno.")) : String(text.prefix(180))
                 alert(id, message: brief)
                 if voice { speak(parent.name + ". " + brief) }

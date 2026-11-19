@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+const browser=await chromium.launch({headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1512,height:960}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{window.messages=[];window.webkit={messageHandlers:{native:{postMessage:m=>messages.push(m)}}}});
+ const data={native:true,projects:[{id:'p',name:'Product',path:'/tmp/product'}],agents:Array.from({length:4},(_,i)=>({id:'a'+i,threadId:'thread-'+i,name:'Agent '+i,projectId:'p',profileId:'work',harness:'codex',managed:true,processRunning:true,state:'active'})),binaries:{codex:'/codex'},docker:{containers:[]}};
+ await page.goto(pathToFileURL(resolve('ui/index.html')).href);await page.evaluate(data=>{receiveNative({event:'snapshot',data});setView('terminals')},data);
+ assert((await page.locator('.terminal-card').first().boundingBox()).height>=320,'The general mosaic reserves space for interactive terminal output');
+ async function create(name,ids){await page.locator('#terminal-menu summary').click();await page.locator('#terminal-view-create').click();assert(await page.locator('#terminal-view-save').isDisabled());await page.locator('#terminal-view-name').fill(name);for(const id of ids)await page.locator('#terminal-view-options label').filter({hasText:'Agent '+id}).locator('input').check();await page.locator('#terminal-view-save').click()}
+ await create('Dependent goals',[0]);assert.equal(await page.locator('.terminal-card').count(),1);const one=await page.locator('.terminal-card').boundingBox(),deck=await page.locator('#terminal-deck').boundingBox();assert(one.height>deck.height-30);assert(one.width>deck.width-80);
+ await page.evaluate(()=>{window.keptTerminal=deckTerminals.get('a0').term;return new Promise(r=>keptTerminal.write('Keep this output\r\n',r))});
+ await page.locator('#terminal-menu summary').click();await page.locator('#terminal-view-edit').click();await page.locator('#terminal-view-name').fill('Two goals');await page.locator('#terminal-view-options label').filter({hasText:'Agent 1'}).locator('input').check();
+ await page.evaluate(data=>receiveNative({event:'snapshot',data}),data);assert(await page.locator('#terminal-view-dialog').isVisible());assert.equal(await page.locator('#terminal-view-name').inputValue(),'Two goals','Snapshots preserve the view editor draft');await page.locator('#terminal-view-save').click();
+ assert.equal(await page.locator('.terminal-card').count(),2);const boxes=await page.locator('.terminal-card').evaluateAll(cards=>cards.map(c=>{const r=c.getBoundingClientRect();return {x:r.x,y:r.y,h:r.height}}));assert.equal(boxes[0].y,boxes[1].y);assert(boxes[1].x>boxes[0].x);assert(await page.evaluate(()=>deckTerminals.get('a0').term===keptTerminal));
+ await page.locator('#terminal-menu summary').click();await page.locator('#terminal-view-edit').click();await page.locator('#terminal-view-options label').filter({hasText:'Agent 2'}).locator('input').check();await page.locator('#terminal-view-save').click();assert.equal(await page.locator('.terminal-card').count(),3);const rows=await page.locator('.terminal-card').evaluateAll(cards=>cards.map(c=>c.getBoundingClientRect().y));assert(rows[2]>rows[0]);
+ await page.reload();await page.evaluate(data=>{data.agents[0].id='reopened';receiveNative({event:'snapshot',data});setView('terminals')},structuredClone(data));assert.equal(await page.locator('.terminal-card').count(),3);assert.equal(await page.locator('#terminal-view-select option:checked').textContent(),'Two goals');assert(await page.locator('[data-agent-id=reopened]').isVisible());
+ await page.evaluate(data=>receiveNative({event:'snapshot',data:{...data,activeWorkspaceId:'other',projectWorkspaces:[{id:'other',projectIds:['p']}]}}),data);assert.equal(await page.locator('#terminal-view-select').inputValue(),'');assert.equal(await page.locator('#terminal-view-select option').count(),1,'Views belong to their workspace context');
+ assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>messages.filter(m=>['input','prompt','launch','stop'].includes(m.action)).length),0);console.log('PASS terminal views: interactive mosaic, saved named selection, one/two/three layouts, retained terminal instances, snapshot-safe editing, restart/thread identity and workspace boundaries');
+}finally{await browser.close()}

@@ -14,7 +14,7 @@
 .annotation-pin>.icon{position:absolute;width:12px;height:12px;stroke-width:1.8;opacity:0;transform:rotate(-30deg);transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-spring)}
 .annotation-pin:hover{transform:translate(-50%,-50%) scale(1.1);background:var(--pin,var(--primary))}
 .annotation-pin:hover>.icon{opacity:1;transform:none}
-.annotation-pin:hover>.icon~span,.annotation-pin:has(>.icon):hover>span{opacity:0;filter:blur(3px)}
+.annotation-pin:hover>.icon~span,.annotation-pin[data-editable=true]:hover>span{opacity:0;filter:blur(3px)}
 .annotation-pin[data-composing=true]{pointer-events:none;font-size:15px;font-weight:500}
 .annotation-pin.is-confirmed{animation:pin-confirm 320ms var(--ease-out)}
 .annotation-card .annotation-pin{position:static;transform:none;flex-shrink:0;animation:none}
@@ -45,8 +45,8 @@
 .annotation-choice legend{font-size:11px;color:var(--muted-foreground);margin-bottom:var(--space-1)}
 .annotation-choice label{position:relative;display:inline-flex;align-items:center;min-height:26px;padding:0 var(--space-2);border:1px solid var(--border);border-radius:var(--radius-full);font-size:11px;cursor:pointer;background:var(--card)}
 .annotation-choice input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
-.annotation-choice label:has(input:checked){border-color:var(--primary);color:var(--foreground);font-weight:600}
-.annotation-choice label:has(input:focus-visible){outline:2px solid var(--ring);outline-offset:1px}
+.annotation-choice label.is-checked{border-color:var(--primary);color:var(--foreground);font-weight:600}
+.annotation-choice label.is-focus-visible{outline:2px solid var(--ring);outline-offset:1px}
 .annotation-popover .check-line{font-size:11px;color:var(--muted-foreground);display:flex;gap:var(--space-2);align-items:center}
 .annotation-popover-actions{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:var(--space-1)}
 .annotation-popover-actions button{min-height:30px;padding:0 var(--space-3);border-radius:var(--radius-full);font-size:12px;font-weight:500}

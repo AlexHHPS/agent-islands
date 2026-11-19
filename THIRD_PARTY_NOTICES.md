@@ -7,6 +7,7 @@ Agent Islands project code is licensed under Apache-2.0. Third-party components 
 | Diorama | Dependency-free SVG island renderer | MIT, copyright 2026 Eduardo Calvo; [original license](ui/vendor/diorama-LICENSE) |
 | xterm.js | Terminal rendering | MIT; [license](ui/vendor/xterm-LICENSE) |
 | xterm addon-fit | Terminal sizing | MIT; [license](ui/vendor/addon-fit-LICENSE) |
+| xterm addon-webgl | Optional terminal renderer | MIT; [license](ui/vendor/addon-webgl-LICENSE) |
 | Figtree | UI font | SIL Open Font License 1.1; [notice](ui/vendor/Figtree-OFL.txt) |
 | JetBrains Mono | Monospace font | SIL Open Font License 1.1; [notice](ui/vendor/JetBrains-Mono-OFL.txt) |
 | Acorn | Development-time catalogue coverage checks | MIT; original LICENSE accompanies the npm package; not packaged in the app |

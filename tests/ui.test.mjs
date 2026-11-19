@@ -11,24 +11,23 @@ await page.addInitScript(()=>{
   window.webkit={messageHandlers:{native:{postMessage:b=>window.nativeMessages.push(b)}}};
 });
 await page.goto(pathToFileURL(resolve('ui/index.html')).href);
-await page.evaluate(()=>receiveNative({event:'snapshot',data:{native:true,projects:[{id:'one',name:'Project <one>',path:'/tmp/one'}],agents:[{id:'codex-1',name:'Codex',harness:'codex',projectId:'one',state:'waiting',managed:true,mode:'goal',message:'¿Continuar?'}],binaries:{codex:'/usr/bin/codex'},docker:{connected:true,status:'ready',containers:[{id:'container',name:'api',image:'image:1',ports:'0.0.0.0:8800->80/tcp',state:'running',status:'Up'}]}}}));
+await page.evaluate(()=>receiveNative({event:'snapshot',data:{native:true,projects:[{id:'one',name:'Project <one>',path:'/tmp/one'}],agents:[{id:'codex-1',name:'Codex',harness:'codex',interactionKind:'question',projectId:'one',state:'waiting',managed:true,mode:'goal',message:'¿Continuar?'}],binaries:{codex:'/usr/bin/codex'},docker:{connected:true,status:'ready',containers:[{id:'container',name:'api',image:'image:1',ports:'0.0.0.0:8800->80/tcp',state:'running',status:'Up'}]}}}));
+assert(await page.locator('#terminals-view').isVisible());
+await page.locator('[data-view="world"]').click();
 assert.equal(await page.locator('.island').count(),2);
 assert.equal(await page.locator('.scene svg').count(),2);
 assert.equal(await page.locator('.project-button').first().textContent(),'Project <one>');
-await page.locator('#team-list [data-agent]').click();
+await page.locator('#attention-list [data-agent]').click();
 await page.waitForFunction(()=>nativeMessages.some(b=>b.action==='select'&&b.id==='codex-1'));
 await page.evaluate(()=>receiveNative({event:'terminalReset',data:{id:'codex-1',bytes:btoa('bridge-terminal-data')}}));
 const beforeContext=await page.evaluate(()=>nativeMessages.filter(b=>b.action==='prompt').length);
-await page.locator('#context-actions [data-context="recap"]').click();
-assert(await page.evaluate(()=>nativeMessages.some(b=>b.action==='intelligence'&&b.kind==='recap'&&b.id==='codex-1')));
+assert.equal(await page.locator('#context-actions').count(),0);
+assert(await page.locator('#situation').isHidden());
+await page.locator('#checkpoint-refresh').click();
+assert(await page.evaluate(()=>nativeMessages.some(b=>b.action==='intelligence'&&b.kind==='checkpoint'&&b.id==='codex-1')));
 assert.equal(await page.evaluate(()=>nativeMessages.filter(b=>b.action==='prompt').length),beforeContext,'Islands analysis must never submit to an agent');
-await page.evaluate(()=>receiveNative({event:'intelligenceResult',data:{requestId:aiRequestID,agentId:'codex-1',kind:'recap',source:'Test',capturedAt:Date.now()/1000,generatedAt:Date.now()/1000,sources:1,summary:'Prueba de resumen',nextStep:'Revisar',draft:'Consulta propuesta'}}));
-assert((await page.locator('#ai-result').textContent()).includes('Prueba de resumen'));
-await page.locator('#ai-draft').click();
-assert.equal(await page.locator('#prompt').inputValue(),'Consulta propuesta');
-assert.equal(await page.evaluate(()=>nativeMessages.filter(b=>b.action==='prompt').length),beforeContext);
-await page.locator('#send').click();
-assert(await page.evaluate(()=>nativeMessages.some(b=>b.action==='prompt'&&b.text==='Consulta propuesta')));
+await page.evaluate(()=>receiveNative({event:'intelligenceResult',data:{requestId:aiRequestID,agentId:'codex-1',kind:'checkpoint',source:'Test',capturedAt:Date.now()/1000,generatedAt:Date.now()/1000,sources:1,summary:'Prueba de resumen',nextStep:'Revisar'}}));
+assert.match(await page.locator('#checkpoint-content').textContent(),/Prueba de resumen/);
 await page.evaluate(()=>receiveNative({event:'promptRejected',data:{id:'codex-1',text:'draft kept',contextKind:'recap',message:'Espera al turno'}}));
 assert.equal(await page.locator('#prompt').inputValue(),'draft kept');
 await page.locator('#prompt').fill('Implementa esto\ncon dos líneas');
@@ -38,6 +37,7 @@ assert(messages.some(b=>b.action==='prompt'&&b.text==='Implementa esto\ncon dos 
 await page.getByRole('button',{name:'Flecha arriba',exact:true}).click();
 messages=await page.evaluate(()=>nativeMessages);
 assert(messages.some(b=>b.action==='input'&&b.text==='\x1b[A'));
+await page.locator('#agent-tools summary').click();
 await page.locator('[data-mode="plan"]').click();
 messages=await page.evaluate(()=>nativeMessages);
 assert(messages.some(b=>b.action==='mode'&&b.mode==='plan'));
@@ -88,16 +88,17 @@ assert(!(await page.evaluate(()=>deckTerminals.get('codex-1').term.buffer.active
 await page.locator('.terminal-card').first().locator('.deck-expand').click();
 assert(await page.locator('#agent-view').isVisible());
 await page.locator('#back-team').click();
+await page.locator('[data-view="world"]').click();
 await page.evaluate(()=>{
   const a={...state.agents[0],state:'active',mode:'goal',goalStatus:'active',tokenBudget:1000,tokensUsed:200};
   receiveNative({event:'snapshot',data:{...state,agents:[a]}});
   window.campusTest=mounts[0];campusTest.stop();campusTest.step(.2);
 });
-assert(await page.locator('#world').evaluate(e=>e.classList.contains('world-large')));
-assert((await page.locator('.scene').first().boundingBox()).width>600,'Campus must be visibly larger than the old miniature');
+assert(!(await page.locator('#world').evaluate(e=>e.classList.contains('world-large'))));
+assert((await page.locator('.scene').first().boundingBox()).width>300,'Scenes should retain the project illustration in the compact cards');
 assert.equal(await page.evaluate(()=>goalBudgetRemaining(state.agents[0])),.8);
 const paused=await page.evaluate(()=>{
-  receiveNative({event:'snapshot',data:{...state,agents:[{...state.agents[0],state:'observed',goalStatus:'paused',tokensUsed:400}]}});
+  receiveNative({event:'snapshot',data:{...state,agents:[{...state.agents[0],state:'observed',interactionKind:null,goalStatus:'paused',tokensUsed:400}]}});
   const same=mounts[0]===campusTest;campusTest.step(.3);
   return {same,pause:campusTest.parts.goals[0].pause.visible,rotor:campusTest.parts.goals[0].rotor.rotation.y,fuel:campusTest.parts.goals[0].fuel.scale.y,pose:agentVisualState(state.agents[0])};
 });
@@ -108,7 +109,7 @@ const blocked=await page.evaluate(()=>{
   return {gate:campusTest.parts.goals[0].barrier.rotation.z,attention:campusTest.parts.robots[0].attention.visible};
 });
 assert.equal(blocked.gate,0);assert.equal(blocked.attention,true);
-assert.equal(await page.locator('.goal-chip.blocked').count(),1);
+assert.equal(await page.locator('.island-agents .agent-chip.signal-blocked').count(),1);
 const complete=await page.evaluate(()=>{
   receiveNative({event:'snapshot',data:{...state,agents:[{...state.agents[0],state:'ready',goalStatus:'complete'}]}});campusTest.step(.2);
   return {trophy:campusTest.parts.goals[0].trophy.visible,rotor:campusTest.parts.goals[0].rotor.visible};
@@ -122,7 +123,7 @@ assert.equal(observed,true,'A saved active goal must not impersonate a running p
 await page.locator('[data-filter="goals"]').click();
 assert.equal(await page.locator('.island').count(),1);
 await page.locator('#world-size').click();
-assert(!(await page.locator('#world').evaluate(e=>e.classList.contains('world-large'))));
+assert(await page.locator('#world').evaluate(e=>e.classList.contains('world-large')));
 // The island picker never runs a model in this test: every native call is recorded.
 await page.locator('#new-agent-top').click();
 assert.equal(await page.locator('#bypass-permissions').isChecked(),false);
@@ -141,7 +142,7 @@ await page.locator('#session-search').fill('No existe');
 assert(await page.locator('#launch-submit').isDisabled());
 await page.locator('#session-search').fill('Islands');
 assert.equal(await page.locator('#saved-session option').count(),1);
-await page.locator('#bypass-permissions').check();
+if(!await page.locator('#bypass-permissions').isChecked())await page.locator('.permission-choice').click();
 assert((await page.locator('#bypass-description').textContent()).includes('sin sandbox') || (await page.locator('#bypass-description').textContent()).includes('ni sandbox'));
 await page.locator('#launch-submit').click();
 const launch=await page.evaluate(()=>nativeMessages.filter(m=>m.action==='launch').at(-1));
@@ -163,21 +164,22 @@ await page.evaluate(()=>receiveNative({event:'launchResult',data:{success:true,i
 assert(!(await page.locator('#launch-dialog').isVisible()));
 await page.locator('#new-agent-top').click();
 assert.equal(await page.locator('#bypass-permissions').isChecked(),false,'Reset bypass between launches');
-await page.locator('#bypass-permissions').check();
+if(!await page.locator('#bypass-permissions').isChecked())await page.locator('.permission-choice').click();
+await page.locator('.engine-other summary').click();
 await page.locator('#launch-harness').selectOption('shell');
 assert(await page.locator('#launch-permissions').isHidden());assert.equal(await page.locator('#bypass-permissions').isChecked(),false);
 await page.locator('#launch-submit').click();
 assert.equal(await page.evaluate(()=>nativeMessages.filter(m=>m.action==='launch').at(-1).bypassPermissions),false);
 await page.evaluate(()=>receiveNative({event:'launchResult',data:{success:true,id:'codex-1'}}));
 await page.evaluate(()=>receiveNative({event:'snapshot',data:{...state,agents:state.agents.map(a=>({...a,bypassPermissions:true}))}}));
-await page.locator('#team-list [data-agent]').first().click();
+await page.locator('#team-view [data-agent]').first().click();
 assert(await page.locator('#agent-permissions').isVisible());
 await page.locator('[data-view="terminals"]').click();
 assert(await page.locator('.deck-permissions').first().isVisible());
 await page.evaluate(()=>receiveNative({event:'snapshot',data:{...state,agents:state.agents.map(a=>({...a,processRunning:false,state:'error'}))}}));
 await page.locator('[data-view="world"]').click();
 if(await page.locator('#back-team').isVisible())await page.locator('#back-team').click();
-await page.locator('#team-list [data-agent]').first().click();
+await page.locator('#team-view [data-agent]').first().click();
 assert(await page.locator('#send').isDisabled(),'A dead process must not accept prompts');
 assert(await page.locator('#agent-reconnect').isVisible());
 await page.locator('#reopen-agent').click();
@@ -208,7 +210,7 @@ await page.evaluate(request=>{const records=Array.from({length:100},(_,i)=>({id:
 assert.equal(await page.locator('#saved-session').inputValue(),'01900000-0000-7000-8000-000000000004','Keep the chosen conversation while the asynchronous catalog loads');
 assert.equal(await page.locator('.session-result').first().getAttribute('data-session'),'01900000-0000-7000-8000-000000000004','An older selected conversation must be visible beyond the initial result limit');
 await page.evaluate(()=>{state.codexSharedServer=true});
-await page.locator('#launch-harness').selectOption('codex');
+await page.locator('[data-engine=codex]').click();
 assert(await page.locator('#bypass-permissions').isDisabled());
 assert.equal(await page.locator('#bypass-permissions').isChecked(),false);
 assert((await page.locator('#bypass-description').textContent()).includes('conservan'));
@@ -217,7 +219,7 @@ assert(!(await page.locator('#bypass-permissions').isDisabled()),'New independen
 // Directory selection stays in the launch flow and does not require an active island.
 await page.locator('#launch-details summary').click();
 await page.locator('#launch-name').fill('Mi nuevo agente');
-await page.locator('#bypass-permissions').check();
+if(!await page.locator('#bypass-permissions').isChecked())await page.locator('.permission-choice').click();
 await page.locator('#launch-add-project').click();
 assert(await page.evaluate(()=>nativeMessages.some(m=>m.action==='addProject'&&m.forLaunch===true)));
 assert(await page.locator('#launch-dialog').isVisible(),'Keep the launch form while the native directory picker is open or cancelled');

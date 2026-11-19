@@ -36,8 +36,21 @@ try{
  const session=service.browsers.sessions.get(frame.id);assert.equal(await session.page.locator('#auth').textContent(),'Signed in with SSO');
  assert.equal(new URL(session.page.url()).search,'?view=interviews');assert.equal(new URL(session.page.url()).hash,'#active');
  assert((await session.context.cookies()).some(c=>c.name==='sso-cookie'&&c.value==='fixture-only'),'The existing context retains its authentication');
- const unrelated=await context.newPage();await unrelated.goto('https://deployed.example.test/unrelated');await session.serial;assert.equal(session.page.url(),original.url(),'An unrelated new tab is not adopted');
- const controlledPopup=session.context.waitForEvent('page'),popupEvent=context.waitForEvent('page');await original.evaluate(()=>window.open('/popup','_blank'));const popup=await popupEvent;await popup.waitForLoadState('domcontentloaded');await controlledPopup;await session.serial;
+ const controlledOriginal=session.page;
+ // Wait for the service's CDP connection to observe the unrelated tab before opening the popup.
+ const unrelatedEvent=session.context.waitForEvent('page');
+ const unrelated=await context.newPage();
+ await unrelated.goto('https://deployed.example.test/unrelated');
+ await unrelatedEvent;
+ await session.serial;
+ assert.equal(session.page,controlledOriginal,'An unrelated new tab is not adopted');
+ const controlledPopup=session.context.waitForEvent('page',{predicate:async page=>await page.opener()===controlledOriginal});
+ const popupEvent=context.waitForEvent('page');
+ await original.evaluate(()=>window.open('/popup','_blank'));
+ const popup=await popupEvent;
+ await popup.waitForLoadState('domcontentloaded');
+ await controlledPopup;
+ await session.serial;
  frame=await service.dispatch('browser.frame',v);assert.equal(frame.tabs.length,2);assert(frame.url.endsWith('/popup'),'A popup from the selected tab becomes controllable');
  const whilePopup=await service.dispatch('browser.tabs',{...scope,endpoint});assert(!whilePopup.tabs.some(t=>t.url.endsWith('/team')||t.url.endsWith('/popup')),'Other conversations cannot take a tab already controlled through a popup');
  const popupClosed=session.page.waitForEvent('close');await popup.close();await popupClosed;frame=await service.dispatch('browser.frame',v);assert.equal(frame.url,'https://deployed.example.test/team');

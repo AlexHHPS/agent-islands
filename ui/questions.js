@@ -4,11 +4,17 @@ function terminalScreenLines(term){
  const b=term?.buffer.active;if(!b)return [];
  return Array.from({length:term.rows},(_,i)=>b.getLine(b.baseY+i)?.translateToString(true) || '');
 }
+function hasLaterIdlePrompt(lines){
+ let prompt=-1,widget=-1;
+ lines.forEach((line,i)=>{if(/^\s*[❯›>]\s*$/.test(line))prompt=i;if(/enter.*(?:select|submit|confirm)|space.*select|esc.*cancel/i.test(line)||/^\s*[❯›>]\s*\d+[.)]/.test(line))widget=i});
+ return widget>=0&&prompt>widget;
+}
 function detectHarnessQuestion(lines,harness){
  if(!['codex','claude'].includes(harness))return null;
  const text=lines.join('\n');
  const queued=text.match(/\b(\d+)\s+(?:questions?|preguntas?)\b/i);
  if(harness==='codex'&&queued&&/(?:to answer|para responder)/i.test(text))return {kind:'queued',count:+queued[1],signature:'queued:'+queued[1]};
+ if(hasLaterIdlePrompt(lines))return null;
  const choiceUI=/(?:enter.*(?:select|submit|confirm)|space.*select|tab.*(?:switch|next)|select.*option|elige.*opci[oó]n)/i.test(text);
  if(!choiceUI)return null;
  const options=[];
@@ -23,10 +29,48 @@ function detectHarnessQuestion(lines,harness){
  const notes=/tab or esc to clear notes/i.test(text);
  // Absolute navigation is safe only when the current cursor is actually visible.
  const selected=options.findIndex(o=>o.selected),multi=/(?:space.*select|multi.select|select all that apply)/i.test(text);
+ if(selected<0&&!notes)return null;
  const before=lines.slice(Math.max(0,options[0].line-4),options[0].line).map(s=>s.trim()).filter(Boolean);
  const title=before.filter(s=>!/^[─━═╭╮│┌┐]+$/.test(s)).slice(-2).join(' ');
  return {kind:'choice',options,selected:notes?-1:selected,multi,notes,navigate:/navigate questions|tab.*(?:switch|next)/i.test(text),title:title || I18n.t('Tu agente necesita una respuesta'),signature:JSON.stringify([options.map(o=>o.label),selected,multi,notes,title])};
 }
+function detectPendingInteraction(lines,harness){
+ if(!['codex','claude'].includes(harness))return null;
+ if(detectHarnessQuestion(lines,harness))return 'question';
+ if(hasLaterIdlePrompt(lines))return null;
+ const text=lines.join('\n');
+ const approval=/(?:would you like to (?:run|allow)|do you want to (?:proceed|allow)|allow (?:this|once)|permitir (?:esta|una vez)|approve (?:this|the))/i.test(text);
+ const choice=lines.some(line=>/^\s*[›❯>]\s*1[.)]/.test(line));
+ return approval&&choice?'approval':null;
+}
+// These parsers never open a DOM renderer or send input. They track the current
+// terminal screen even when a conversation isn't selected or in the mosaic.
+const attentionScreens=new Map();
+function updateScreenAttention(id,term){
+ const a=state.agents.find(a=>a.id===id);if(!a||!isOpenTerminal(a)||!['codex','claude'].includes(a.harness))return;
+ const kind=detectPendingInteraction(terminalScreenLines(term),a.harness),previous=terminalInteractions.get(id)?.kind||null;
+ if(kind===previous)return;terminalInteractions.set(id,{kind});
+ send('terminalInteraction',{id,kind});render();renderSituation();
+}
+const questionsReceiveNative=window.receiveNative;
+window.receiveNative=message=>{
+ questionsReceiveNative(message);const {event,data}=message;
+ if(event==='snapshot'){
+  const eligible=new Set(state.agents.filter(a=>isOpenTerminal(a)&&['codex','claude'].includes(a.harness)&&!a.parentId).map(a=>a.id));
+  for(const [id,screen] of attentionScreens)if(!eligible.has(id)){clearTimeout(screen.timer);screen.term.dispose();attentionScreens.delete(id);terminalInteractions.delete(id)}
+  for(const id of eligible)if(!attentionScreens.has(id)){const term=new Terminal({cols:90,rows:28,scrollback:0}),screen={term,initializing:true};attentionScreens.set(id,screen);send('replay',{id})}
+ }
+ if(event==='terminal'){const a=state.agents.find(a=>a.id===data.id);if(a&&['shell','custom'].includes(a.harness)){terminalOutputAt.set(a.id,Date.now());const entry=deckTerminals.get(a.id);if(entry){entry.card.dataset.activity='working';clearTimeout(entry.activityTimer);entry.activityTimer=setTimeout(()=>{entry.card.dataset.activity=terminalCardActivity(a)},1850)}}}
+ if(event==='terminalGeometry'){const screen=attentionScreens.get(data.id);if(screen)screen.term.resize(data.cols,data.rows)}
+ if(event==='terminalReplay'||event==='terminal'){
+  const screen=attentionScreens.get(data.id);if(!screen)return;
+  if(event==='terminal'&&screen.initializing)return
+  if(data.cols&&data.rows)screen.term.resize(data.cols,data.rows);
+  if(event==='terminalReplay'){screen.term.reset();screen.initializing=false}
+  screen.term.write(decodeBytes(data.bytes),()=>{clearTimeout(screen.timer);screen.timer=setTimeout(()=>updateScreenAttention(data.id,screen.term),100)});
+ }
+ if(event==='sessionEnded'){const screen=attentionScreens.get(data.id);if(screen){clearTimeout(screen.timer);screen.term.dispose();attentionScreens.delete(data.id)}}
+};
 let currentQuestion=null,questionUpdateTimer;
 const questionBar=document.createElement('section');questionBar.id='agent-questions';questionBar.dataset.slot='agent-questions';I18n.attribute(questionBar,'aria-label',()=>I18n.t('Preguntas del agente'));questionBar.hidden=true;
 $('#terminal-host').before(questionBar);
@@ -37,6 +81,7 @@ function updateHarnessQuestions(){
  const a=state.agents.find(a=>a.id===terminalTarget());
  questionJump.hidden=a?.harness!=='codex'||a?.processRunning===false;
  const question=detectHarnessQuestion(terminalScreenLines(terminal),a?.harness);
+ if(a)updateScreenAttention(a.id,terminal);
  if(!question){currentQuestion=null;questionBar.hidden=true;return}
  if(currentQuestion?.signature===question.signature&&currentQuestion.agent===a.id)return;
  currentQuestion={...question,agent:a.id};questionBar.hidden=false;

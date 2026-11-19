@@ -11,7 +11,7 @@
 - Agrupar varios proyectos en un workspace y acotar el contexto visible.
 - Abrir conversaciones nuevas o recuperar las guardadas junto a su directorio original.
 - Usar perfiles separados, incluido `claude-personal`, con sus propias configuraciones.
-- Trabajar con terminales reales, anclar las prioritarias arriba y consultar checkpoints de progreso por conversación.
+- Trabajar con terminales reales, anclar las prioritarias arriba, crear vistas personalizadas y consultar checkpoints de progreso por conversación.
 - Distinguir goals activos, bloqueados, pausados y completados sin confundir presupuesto con avance.
 - Controlar un navegador Chromium, seleccionar un componente o una región y añadirlo al borrador del chat.
 - Grabar un recorrido y enviar vídeo, fotogramas y pasos como referencia para un cambio.

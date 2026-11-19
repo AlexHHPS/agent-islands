@@ -2,7 +2,42 @@
 
 Changes are grouped by user-visible behavior. Versions before public distribution were local previews.
 
-## 0.13.0 — Unreleased
+## 0.18.0 — Terminal-first workspace
+
+- Open directly in Terminales. Mundo pairs compact island cards with a wider team sidebar and consistent status labels.
+- Pulso shows actionable local signals. Review opens the specific agent, and Continue sends one turn to an eligible terminal.
+- Agent detail keeps the checkpoint beside the terminal and offers a refresh when newer activity or QA evidence is available.
+- Agent launch and summary AI use visual selectors. Navigation, terminal filters, and checkpoint actions use identifiable icons with accessible labels. Secondary tools share compact menus.
+
+## 0.17.0 — Unreleased
+
+- Fix the interface becoming very slow while agents work. Page states that were written as `:has()` selectors (open dialogs, expanded pulse, checked choices) are now plain classes. WebKit re-checked those selectors against the whole page for every inserted element; with working agents each island frame inserted about 800 elements and took about 730 ms. The same frame now takes about 6 ms.
+- Reorder island elements in place. A walking robot used to re-insert the whole scene on every frame (about 800 elements); now only the groups that changed place move (about 20). This is a local change to the vendored Diorama kernel; rendering is pixel-identical.
+- Pace the island loop with a timer instead of a display-rate callback that skipped most frames.
+- Make the GPU terminal renderer an opt-in trial (`localStorage.setItem('islands.gpuTerminals','1')`). Inside the native window it slowed page snapshots several times over and is not yet verified on real sessions, so terminals use the default renderer. When enabled, it is taken back after the display sleeps and the GPU context is lost.
+
+## 0.16.0 — Unreleased
+
+- Keep the interface light during long sessions. Islands animate at 24 frames a second from one shared loop and only while someone is using the window. After 20 seconds without pointer activity, or when the window cannot be seen, they hold their last frame and use no CPU; moving the pointer or an agent change wakes them. Measured in WebKit at full screen with six sessions, the world view goes from about 175% CPU at rest to 0%.
+- Draw the island's shadow on the page as a static gradient. The previous blurred SVG filter was recalculated on every animated frame and took about 100 ms per frame.
+- Vendor the xterm WebGL renderer 0.19.0 (pinned). Never installed as the default; see 0.17.0.
+- Skip rewriting the team list, attention list, counts and island chips when a snapshot does not change them.
+- Tell the interface when the native window becomes hidden or visible, so animation stops with the window.
+
+## 0.15.0 — Unreleased
+
+- Keep the interface responsive while agents produce heavy terminal output. Output reaches the interface as one update per session about 30 times a second instead of one message per read.
+- Stop sending terminal output while the window cannot be seen (display asleep, minimised or covered). On return, each session that produced output is redrawn once from its saved history instead of replaying a backlog. Agents keep running throughout.
+- Reload the interface automatically if its process ends, and redraw every terminal from history. Agent sessions are not interrupted.
+
+## 0.14.0 — Unreleased
+
+- Close a session from its inspector or terminal card, retire the terminal after confirmed termination, and return to the terminal mosaic. Cancellation preserves the session and current view.
+- Count attention only for blocked/limited goals or confirmed pending questions/approvals. Ignore generic waiting/idle notifications, ordinary shell prompts and completed turns. Track current terminal screens without submitting provider input.
+- Animate terminal status icons only during activity and respect reduced motion and document visibility.
+- Increase general terminal-card height and add persistent named terminal views. One terminal fills the available workspace; two sit side by side; larger selections use a grid. Views preserve conversation identity and workspace boundaries.
+
+## 0.13.0 — Work panels and browser reuse
 
 - Give work panels the full canvas when a conversation is open or an expanded pulse has information. Remove the decorative island from that view and let panel content scroll without the old height cap.
 - Open public web addresses with their full path, query and fragment; keep local frontend discovery as a secondary option.

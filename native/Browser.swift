@@ -4,7 +4,7 @@ import WebKit
 extension AppDelegate {
     func browserParameters(_ input: [String: Any]) throws -> [String: Any] {
         guard let id = input["agentId"] as? String, let agent = agents[id], agent.managed,
-              agent.parentId == nil, agentIsInScope(agent), ["codex", "claude"].contains(agent.harness) else {
+              agent.parentId == nil, agent.closedAt == nil, agentIsInScope(agent), ["codex", "claude"].contains(agent.harness) else {
             throw launchFailure(L("Selecciona una conversación de Codex o Claude para abrir el navegador."))
         }
         var params = input

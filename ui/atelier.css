@@ -469,10 +469,10 @@
 /* Large screens: the layout grows a step instead of floating in margin (type, space and containers are rem).
  * <html data-wide="fill"> opts out, for apps that should show more on a big screen rather than bigger. */
 @media (min-width: 1800px) {
-  :root:not([data-wide="fill"]):not(:has([data-slide])) { font-size: 106.25%; }
+  :root:not([data-wide="fill"]) { font-size: 106.25%; }
 }
 @media (min-width: 2240px) {
-  :root:not([data-wide="fill"]):not(:has([data-slide])) { font-size: 112.5%; }
+  :root:not([data-wide="fill"]) { font-size: 112.5%; }
 }
 
 @theme inline {

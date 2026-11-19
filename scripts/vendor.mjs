@@ -4,6 +4,8 @@ for (const [src, dst] of [
   ['node_modules/@xterm/xterm/lib/xterm.js', 'xterm.js'],
   ['node_modules/@xterm/xterm/css/xterm.css', 'xterm.css'],
   ['node_modules/@xterm/addon-fit/lib/addon-fit.js', 'addon-fit.js'],
+  ['node_modules/@xterm/addon-webgl/lib/addon-webgl.js', 'addon-webgl.js'],
   ['node_modules/@xterm/xterm/LICENSE', 'xterm-LICENSE'],
   ['node_modules/@xterm/addon-fit/LICENSE', 'addon-fit-LICENSE'],
+  ['node_modules/@xterm/addon-webgl/LICENSE', 'addon-webgl-LICENSE'],
 ]) copyFileSync(src, `ui/vendor/${dst}`);
