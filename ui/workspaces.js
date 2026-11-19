@@ -2,8 +2,10 @@
 function workspaceScopeIdentity(data){const id=data.activeWorkspaceId || '';return id?JSON.stringify([id,(data.projectWorkspaces||[]).find(w=>w.id===id)?.projectIds || data.projects.map(p=>p.id)]):''}
 let workspaceEditorId=null,workspaceSelection=[],workspacePending=false,workspaceSeen=workspaceScopeIdentity(state);
 const workspaceBar=document.createElement('div');workspaceBar.id='workspace-bar';workspaceBar.dataset.slot='workspace-switcher';
-workspaceBar.innerHTML=ht`<details class="control-menu" id="workspace-menu"><summary>${icon('folder')}<span id="workspace-current">Todos los proyectos</span>${icon('chevron')}</summary><div class="menu-items"><label for="workspace-select">Workspace</label><select id="workspace-select" aria-describedby="workspace-context"><option value="">Todos los proyectos</option></select><div id="workspace-context"></div><span id="workspace-background" hidden></span><button id="workspace-create" type="button">${icon('plus')} Crear workspace</button><button id="workspace-edit" type="button" hidden>${icon('plan')} Editar workspace</button></div></details>`;
-$('.view-switch').before(workspaceBar);
+// A pop-up button with a menu, as in a Mac toolbar: the choices are checkable menu items, the actions that open
+// a sheet end in an ellipsis and sit below a separator.
+workspaceBar.innerHTML=ht`<details class="control-menu" id="workspace-menu"><summary aria-haspopup="menu" title="Workspace">${icon('folder')}<span id="workspace-current">Todos los proyectos</span>${icon('popup')}</summary><div class="menu-items" role="menu" aria-label="Workspace"><div id="workspace-options" role="group"></div><p id="workspace-context" class="menu-note"></p><p id="workspace-background" class="menu-note" hidden></p><hr class="menu-separator"><button id="workspace-create" type="button" role="menuitem">Crear workspace…</button><button id="workspace-edit" type="button" role="menuitem" hidden>Editar workspace…</button></div></details>`;
+$('#sidebar-workspace').append(workspaceBar);
 const workspaceDialog=document.createElement('dialog');workspaceDialog.id='workspace-dialog';workspaceDialog.dataset.slot='workspace-editor';
 workspaceDialog.innerHTML=ht`<form id="workspace-form"><div class="dialog-heading"><div><h2 id="workspace-editor-title">Crear workspace</h2></div><button id="workspace-close" type="button" class="icon-button" aria-label="Cerrar workspace" title="Cerrar workspace">${icon('close')}</button></div><label for="workspace-name">Nombre</label><input id="workspace-name" required maxlength="80" placeholder="Portal · API y web" autocomplete="off"><div class="workspace-list-heading"><label for="workspace-search">Proyectos incluidos</label><button id="workspace-add-folders" type="button">Añadir carpetas…</button></div><input id="workspace-search" type="search" placeholder="Buscar proyectos o rutas…" aria-label="Buscar proyectos para el workspace"><div id="workspace-projects" role="group" aria-label="Seleccionar proyectos"></div><label for="workspace-primary">Proyecto principal</label><select id="workspace-primary" aria-describedby="workspace-primary-note"></select><p id="workspace-primary-note">Los agentes empiezan aquí y reciben los demás directorios incluidos.</p><p id="workspace-error" role="alert" hidden></p><div class="dialog-footer"><span id="workspace-selected-count" role="status"></span><button id="workspace-cancel" type="button">Cancelar</button><button id="workspace-save" type="submit" class="primary">Crear y abrir</button></div></form>`;
 document.body.append(workspaceDialog);
@@ -15,9 +17,10 @@ function prepareWorkspaceSwitch(){
  $('#code').value='';$('#code').disabled=true;$('#save-file').disabled=true;I18n.bind($('#file-name'),"textContent",()=>I18n.t('Abre un archivo'));
  return true;
 }
+function workspaceOption(id,name,active){return ht`<button type="button" role="menuitemradio" class="menu-check" data-workspace="${esc(id)}" aria-checked="${id===active?'true':'false'}"><span class="menu-check-mark">${icon('check')}</span><span class="menu-label">${esc(name)}</span></button>`}
 function renderWorkspaceBar(){
- const groups=state.projectWorkspaces || [],active=state.activeWorkspaceId || '',select=$('#workspace-select');
- const html=ht('<option value="">Todos los proyectos</option>')+groups.map(g=>ht`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');if(select.innerHTML!==html)select.innerHTML=html;select.value=active;
+ const groups=state.projectWorkspaces || [],active=state.activeWorkspaceId || '',options=$('#workspace-options');
+ const html=workspaceOption('',I18n.t('Todos los proyectos'),active)+groups.map(g=>workspaceOption(g.id,g.name,active)).join('');if(options.innerHTML!==html)options.innerHTML=html;
  $('#workspace-edit').hidden=!active;
  I18n.bind($('#workspace-current'),'textContent',()=>groups.find(g=>g.id===active)?.name||I18n.t('Todos los proyectos'));
  I18n.bind($('#workspace-context'),"textContent",()=>active?I18n.count('project.count',state.projects.length)+' · '+state.projects.map(p=>p.name).join(' + '):'');
@@ -46,7 +49,7 @@ function renderWorkspacePrimary(){
  I18n.bind($('#workspace-selected-count'),"textContent",()=>I18n.count('selected.count',workspaceSelection.length));$('#workspace-save').disabled=workspacePending||!workspaceSelection.length||workspaceSelection.length>30;
 }
 $('#workspace-create').onclick=()=>editWorkspace();$('#workspace-edit').onclick=()=>editWorkspace(state.activeWorkspaceId);
-$('#workspace-select').onchange=()=>{const id=$('#workspace-select').value;if(!prepareWorkspaceSwitch()){$('#workspace-select').value=state.activeWorkspaceId||'';return}$('#workspace-menu').open=false;send('workspaceActivate',{workspaceId:id})};
+$('#workspace-options').onclick=e=>{const item=e.target.closest('[data-workspace]');if(!item)return;const id=item.dataset.workspace;$('#workspace-menu').open=false;if(id===(state.activeWorkspaceId||'')||!prepareWorkspaceSwitch())return;send('workspaceActivate',{workspaceId:id})};
 $('#workspace-search').oninput=renderWorkspaceProjects;$('#workspace-add-folders').onclick=()=>send('addProject',{registrationOnly:true});
 $('#workspace-close').onclick=$('#workspace-cancel').onclick=()=>workspaceDialog.close();
 $('#workspace-form').onsubmit=e=>{
@@ -71,7 +74,7 @@ window.receiveNative=message=>{
  if(message.event==='workspaceProjectsAdded'){for(const id of message.data.projectIds)if(!workspaceSelection.includes(id))workspaceSelection.push(id);renderWorkspaceProjects()}
  if(message.event==='workspaceResult'){
   workspacePending=false;renderWorkspacePrimary();
-  if(message.data.success)workspaceDialog.close();else{I18n.bind($('#workspace-error'),"textContent",()=>message.data.message || I18n.t('No se pudo guardar el workspace.'));$('#workspace-error').hidden=false;$('#workspace-select').value=state.activeWorkspaceId||''}
+  if(message.data.success)workspaceDialog.close();else{I18n.bind($('#workspace-error'),"textContent",()=>message.data.message || I18n.t('No se pudo guardar el workspace.'));$('#workspace-error').hidden=false;renderWorkspaceBar()}
  }
 };
 renderWorkspaceBar();

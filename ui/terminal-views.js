@@ -35,7 +35,7 @@ function editTerminalView(id=null){
 function updateTerminalViewSave(){$('#terminal-view-save').disabled=!$('#terminal-view-name').value.trim()||terminalViewMembers.length===0}
 $('#terminal-view-name').oninput=updateTerminalViewSave;
 $('#terminal-view-create').onclick=()=>editTerminalView();$('#terminal-view-edit').onclick=()=>editTerminalView(currentTerminalView()?.id);$('#terminal-view-cancel').onclick=()=>terminalViewDialog.close();
-$('#terminal-view-select').onchange=e=>{terminalViewSelection[terminalViewScope()]=e.target.value;$('#terminal-project').value='';saveTerminalViews();renderTerminalDeck()};
+$('#terminal-view-select').onchange=e=>{$('#terminal-menu').open=false;terminalViewSelection[terminalViewScope()]=e.target.value;$('#terminal-project').value='';saveTerminalViews();renderTerminalDeck()};
 $('#terminal-view-form').onsubmit=e=>{e.preventDefault();if($('#terminal-view-save').disabled)return;const id=terminalViewEditing||crypto.randomUUID(),value={id,name:$('#terminal-view-name').value.trim().slice(0,80),scope:terminalViewScope(),members:terminalViewMembers};terminalViews=terminalViews.filter(v=>v.id!==id);terminalViews.push(value);terminalViewSelection[terminalViewScope()]=id;$('#terminal-project').value='';saveTerminalViews();terminalViewDialog.close();renderTerminalDeck()};
 $('#terminal-view-delete').onclick=()=>{terminalViews=terminalViews.filter(v=>v.id!==terminalViewEditing);delete terminalViewSelection[terminalViewScope()];saveTerminalViews();terminalViewDialog.close();renderTerminalDeck()};
 const terminalViewsReceiveNative=window.receiveNative;

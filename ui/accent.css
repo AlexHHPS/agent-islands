@@ -1,0 +1,22 @@
+/* Apache-2.0 · Accent colour (Settings → General → Color de acento).
+   Dark mode uses the bright tone itself with dark text on it (5.7:1 or more). Light mode uses a darker shade of
+   the same hue, found in OKLCH by lowering lightness until white text reaches 4.5:1; that shade also reads as
+   text on white (4.6:1 or more). html:root[data-accent] outweighs atelier.css's mode and contrast blocks.
+   "system" follows the accent chosen in macOS. */
+html:root[data-accent] { --primary: var(--accent-light); --brand: var(--accent-light); --ring: var(--accent-light); --sidebar-primary: var(--accent-light); --sidebar-ring: var(--accent-light); --primary-foreground: #fff; --brand-foreground: #fff; --sidebar-primary-foreground: #fff; }
+html:root[data-accent="graphite"] { --accent-light: #747474; --accent-dark: #ebebeb; }
+html:root[data-accent="red"] { --accent-light: #c84c46; --accent-dark: #f07068; }
+html:root[data-accent="orange"] { --accent-light: #b65c1f; --accent-dark: #f09058; }
+html:root[data-accent="yellow"] { --accent-light: #946f00; --accent-dark: #f8d058; }
+html:root[data-accent="green"] { --accent-light: #1d8639; --accent-dark: #68c878; }
+html:root[data-accent="blue"] { --accent-light: #2b74d1; --accent-dark: #5098f8; }
+html:root[data-accent="purple"] { --accent-light: #875ecb; --accent-dark: #a880f0; }
+html:root[data-accent="pink"] { --accent-light: #b05685; --accent-dark: #f090c0; }
+html:root[data-accent="system"] { --accent-light: #2b74d1; --accent-dark: #5098f8; }
+@supports (color: AccentColor) { html.is-app:root[data-accent="system"] { --accent-light: AccentColor; --accent-dark: AccentColor; } }
+@media (prefers-color-scheme: dark) {
+  html:root[data-accent]:not([data-mode="light"]) { --primary: var(--accent-dark); --brand: var(--accent-dark); --ring: var(--accent-dark); --sidebar-primary: var(--accent-dark); --sidebar-ring: var(--accent-dark); --primary-foreground: #1c1c1e; --brand-foreground: #1c1c1e; --sidebar-primary-foreground: #1c1c1e; }
+}
+html:root[data-accent]:is(.dark, [data-mode="dark"]) { --primary: var(--accent-dark); --brand: var(--accent-dark); --ring: var(--accent-dark); --sidebar-primary: var(--accent-dark); --sidebar-ring: var(--accent-dark); --primary-foreground: #1c1c1e; --brand-foreground: #1c1c1e; --sidebar-primary-foreground: #1c1c1e; }
+/* The macOS accent is a mid tone: it keeps white text in both modes, as AppKit does. */
+html.is-app:root[data-accent="system"] { --primary-foreground: #fff !important; --brand-foreground: #fff !important; --sidebar-primary-foreground: #fff !important; }

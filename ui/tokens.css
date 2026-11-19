@@ -25,3 +25,11 @@
 /* Semantic state colours; labels and icons accompany every signal. */
 :root {--signal-working:#336343;--signal-waiting:#8a5c16;--signal-blocked:#aa3f36;--signal-plan:#346b8b;--signal-goal:#77539a;--signal-ready:#42664e;--signal-idle:#626570;--signal-paused:#626570;}
 @media(prefers-color-scheme:dark){:root{--signal-working:#a5c8a6;--signal-waiting:#e8cf9b;--signal-blocked:#f3a696;--signal-plan:#a9c6db;--signal-goal:#cfb4d5;--signal-ready:#a5c8a6;--signal-idle:#b3bdb4;--signal-paused:#b3bdb4;}}
+
+/* Vendor marks (assets/brands/, monochrome): one tint per tool, chosen here for every surface. Each is the
+   tool's own brand colour, toned so the mark reads on light and dark tiles; marks without a brand colour
+   follow the text colour. Change a value to recolour that mark everywhere. */
+:root{--brand-claude:#d97757;--brand-codex:#4f5bff;--brand-gemini:#3186ff;--brand-docker:#1d7fd1;--brand-opencode:currentColor;--brand-goose:currentColor;--brand-hermes:currentColor}
+@media(prefers-color-scheme:dark){:root{--brand-codex:#8c95ff;--brand-gemini:#6aa6ff;--brand-docker:#4aa8f0}}
+.brand-claude{color:var(--brand-claude)}.brand-codex{color:var(--brand-codex)}.brand-gemini{color:var(--brand-gemini)}.brand-docker{color:var(--brand-docker)}
+.brand-opencode{color:var(--brand-opencode)}.brand-goose{color:var(--brand-goose)}.brand-hermes{color:var(--brand-hermes)}

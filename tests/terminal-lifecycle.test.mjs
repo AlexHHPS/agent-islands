@@ -19,8 +19,10 @@ try{
  await page.waitForFunction(()=>document.querySelector('#attention-count').textContent==='0');
  await page.evaluate(data=>receiveNative({event:'snapshot',data:{...data,agents:data.agents.map((a,i)=>i===3?{...a,interactionKind:'approval'}:a)}}),snapshot);assert.equal(await page.locator('#attention-count').textContent(),'1');
  await page.evaluate(data=>receiveNative({event:'snapshot',data}),snapshot);assert.equal(await page.locator('#attention-count').textContent(),'0');
- assert(await page.locator('.terminal-card[data-agent-id=a0] .avatar .icon').evaluate(el=>getComputedStyle(el).animationName!=='none'));
- await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.terminal-card[data-agent-id=a0] .avatar .icon').evaluate(el=>getComputedStyle(el).animationName),'none');await page.emulateMedia({reducedMotion:'no-preference'});
+ // The state glyph shows work in progress; vendor logos stay still.
+ assert(await page.locator('.terminal-card[data-agent-id=a0] .deck-state .icon').evaluate(el=>getComputedStyle(el).animationName!=='none'));
+ assert.equal(await page.locator('.terminal-card[data-agent-id=a0] .avatar > *').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+ await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.terminal-card[data-agent-id=a0] .deck-state .icon').evaluate(el=>getComputedStyle(el).animationName),'none');await page.emulateMedia({reducedMotion:'no-preference'});
  await page.evaluate(()=>selectAgent('a0'));await page.locator('#stop-agent').click();assert(await page.evaluate(()=>messages.some(m=>m.action==='stop'&&m.id==='a0')));
  await page.evaluate(()=>receiveNative({event:'sessionCloseCancelled',data:{id:'a0'}}));assert(await page.locator('#agent-view').isVisible());assert.equal(await page.evaluate(()=>selected),'a0');
  await page.locator('#stop-agent').click();await page.evaluate(()=>receiveNative({event:'sessionEnded',data:{id:'a0',requested:true}}));assert.equal(await page.evaluate(()=>view),'terminals');assert.equal(await page.locator('.terminal-card').count(),5);assert.equal(await page.locator('[data-agent-id=a0]').count(),0);

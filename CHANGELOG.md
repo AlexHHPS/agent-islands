@@ -2,6 +2,18 @@
 
 Changes are grouped by user-visible behavior. Versions before public distribution were local previews.
 
+## Unreleased — Native macOS shell
+
+- Settings opens in its own window (General, Avisos, Integraciones, Inteligencia, Ayuda, Acerca de) with search-free sections, segmented controls and keyboard navigation. ⌘, focuses it if it is already open.
+- Navigation can sit above the content as a toolbar (default) or as vertical tabs on the left or right. Islands in the vertical tabs show the marks of the agents working there and a dot for their most urgent state.
+- Interface style: Clásico or Cristal. Cristal blurs the window and draws the content and inspector as separate glass panes; the pane in use stays clear.
+- Accent colour: Sistema plus eight colours. Dark mode uses the bright tone with dark text; light mode uses a darker shade of the same hue that keeps white text at 4.5:1.
+- Alerts per state (Te necesita, Error, Turno terminado) and channel (notification, Dock badge, sound). Unfocused terminal cards dim, and each card shows the reason it needs you.
+- Icons come from Lucide only. Vendor marks are the owners' own isotypes in one colour, tinted from `ui/tokens.css`; the Codex symbol stays a LobeHub redrawing until OpenAI publishes one. See `assets/brands/NOTICE.md`.
+- Window behaviour follows AppKit: the toolbar and sidebar head move the window, every edge and corner resizes it, the traffic lights sit centred in the 52px toolbar, interface text does not select, and WebKit's own right-click menu is gone outside fields.
+- Menus behave like NSMenu: a press outside closes them, one is open at a time, choosing an item closes it, arrows move between items and they close when the window loses focus. The workspace picker is a pop-up button with checkable items.
+- Fix Settings sections that could not scroll, inspector rows whose state label was pushed out of the panel, and dialogs that closed after a text selection was dragged out of a field.
+
 ## 0.18.0 — Terminal-first workspace
 
 - Open directly in Terminales. Mundo pairs compact island cards with a wider team sidebar and consistent status labels.
