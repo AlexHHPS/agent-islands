@@ -1,6 +1,6 @@
 {
   "name": "agent-islands",
-  "version": "0.18.0",
+  "version": "0.17.1",
   "private": true,
   "description": "A local macOS workspace for coding agents",
   "scripts": {
