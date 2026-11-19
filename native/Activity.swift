@@ -4,6 +4,8 @@ import UserNotifications
 /// What the app does when an agent reaches a state that matters, chosen per state and per channel
 /// (the Program Activity model in Rex: Working, Blocked, Error and Done each pick their outputs).
 /// The card in the main window always shows the state; these channels reach you outside the app.
+/// Set after the first badge permission check of this launch.
+var badgePermissionAsked = false
 let activityStates = ["attention", "error", "done"]
 let activityChannelNames = ["notification", "dock", "sound"]
 let defaultActivityChannels: [String: [String: Bool]] = [
@@ -55,6 +57,24 @@ extension AppDelegate {
         if activityChannel("error", "dock") { count += open.filter { $0.state == "error" && !AgentControlState($0).needsAttention }.count }
         let label = count > 0 ? String(count) : nil
         if NSApp.dockTile.badgeLabel != label { NSApp.dockTile.badgeLabel = label }
+        if count > 0 { askForBadgePermissionOnce() }
+    }
+
+    /// macOS hides the Dock badge of an app that never asked for notification permission, and the Dock channel is on
+    /// by default. Ask once, the first time there is something to count; granting it also turns system alerts on.
+    func askForBadgePermissionOnce() {
+        guard !badgePermissionAsked else { return }
+        badgePermissionAsked = true
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            guard settings.authorizationStatus == .notDetermined else { return }
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { allowed, _ in
+                guard allowed else { return }
+                DispatchQueue.main.async {
+                    self.notifications = true; UserDefaults.standard.set(true, forKey: "notifications"); self.publish()
+                }
+            }
+        }
     }
 
     /// Notification and sound for one event. Sound plays on its own when the notification is off.

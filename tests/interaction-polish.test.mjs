@@ -75,6 +75,11 @@ try {
   assert.equal(await page.evaluate(() => document.querySelector('.view-switch').hasAttribute('data-no-drag')), true);
   assert(await page.evaluate(() => { const set = document.querySelector('#settings').getBoundingClientRect(), search = document.querySelector('#command-search').getBoundingClientRect(); return set.width > 0 && set.left >= search.right; }), 'Settings sits after the search field in the toolbar');
   await page.evaluate(() => applyNavigationLayout('left'));
+  // Keyboard focus shows on rows that reset box-shadow for their own look (sidebar islands).
+  await page.locator('#sidebar-toggle').focus();
+  for (let i = 0; i < 6 && !(await page.evaluate(() => document.activeElement?.matches('.project-row'))); i++) await page.keyboard.press('Tab');
+  assert(await page.evaluate(() => document.activeElement?.matches('.project-row')), 'Tab reaches the island rows');
+  assert.notEqual(await page.evaluate(() => getComputedStyle(document.activeElement).boxShadow), 'none', 'A focused island row shows the focus ring');
   assert.equal(await page.evaluate(() => document.querySelector('#sidebar').hasAttribute('data-drag')), false, 'As a sidebar only its head moves the window');
   await page.evaluate(() => { document.documentElement.classList.remove('is-app'); applyNavigationLayout('top'); });
 
@@ -110,5 +115,5 @@ try {
   assert.deepEqual(await settings.evaluate(() => [...document.querySelectorAll('#settings-body details')].slice(0, 3).map(d => d.open)), [false, false, true], 'An unchanged snapshot leaves open sections alone');
 
   assert.deepEqual(errors, []);
-  console.log('PASS interaction polish: dialogs over a visible app, backdrop close, modal-aware shortcuts, menu Escape, focus return, Mac chrome selection and drag strips, inspector rows and settings scroll, menus, settings keyboard, accent colour and stable snapshots');
+  console.log('PASS interaction polish: dialogs over a visible app, backdrop close, modal-aware shortcuts, menu Escape, focus return, Mac chrome selection and drag strips, inspector rows and settings scroll, focus ring, menus, settings keyboard, accent colour and stable snapshots');
 } finally { clearTimeout(kill); await browser.close(); }

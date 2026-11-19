@@ -461,3 +461,10 @@ html.is-app .stack-logo { box-shadow: 0 0 0 1.5px var(--background); }
 /* The most urgent agent comes first in the stack, so it is drawn on top. */
 .stack-logo { position: relative; }
 .stack-logo:nth-child(1) { z-index: 3; } .stack-logo:nth-child(2) { z-index: 2; } .stack-logo:nth-child(3) { z-index: 1; }
+
+/* Keyboard focus always shows. Rows, chips and toolbar buttons reset box-shadow for their own looks, which also
+   removed the ring; this wins over those resets. Menu items keep their highlight instead, and the terminal's own
+   hidden input never shows one. */
+:is(button, summary, a[href], select, input, textarea, [tabindex]):not([role^=menuitem]):not(.xterm *):focus-visible {
+  outline: 0; box-shadow: 0 0 0 1px var(--ring), 0 0 0 4px color-mix(in srgb, var(--ring) 22%, transparent) !important;
+}
