@@ -24,7 +24,10 @@ await page.locator('#expand-terminal').click();
 await page.evaluate(()=>fitTerminal());
 assert(await page.locator('#terminal-surface').evaluate(e=>e.clientWidth>1000));
 await page.locator('[data-view="terminals"]').click();
-await page.evaluate(()=>fitDeck());
+await page.waitForFunction(()=>[...deckTerminals.values()].every(({card})=>{
+  const surface=card.querySelector('.deck-terminal .terminal-surface');
+  return surface.querySelector('.xterm-screen').getBoundingClientRect().height<=surface.clientHeight+1;
+}));
 const decks=await page.evaluate(()=>[...document.querySelectorAll('.deck-terminal .terminal-surface')].map(e=>{const outer=e.getBoundingClientRect(),screen=e.querySelector('.xterm-screen').getBoundingClientRect();return {width:outer.width,height:outer.height,right:screen.right-outer.right,bottom:screen.bottom-outer.bottom}}));
 assert(decks.length>=2);
 for(const d of decks){assert(d.width>0&&d.height>0);assert(d.right<=1&&d.bottom<=1,JSON.stringify(d))}

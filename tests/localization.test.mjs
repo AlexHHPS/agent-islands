@@ -33,7 +33,7 @@ try{
  await page.evaluate(()=>selectAgent('a'));await page.locator('#prompt').fill(draft);
  await page.evaluate(()=>new Promise(r=>terminal.write('Provider says: Guardar / Cancelar\r\n',r)));
  const before=await page.evaluate(()=>messages.filter(m=>['prompt','launch','stop','workspaceActivate','intelligence'].includes(m.action)).length);
- await page.locator('#settings').click();await page.locator('#app-language').selectOption('en');
+ await page.locator('#tools-menu summary').click();await page.locator('#settings').click();await page.locator('#app-language').selectOption('en');
  assert.equal(await page.locator('html').getAttribute('lang'),'en');
  assert.equal(await page.locator('#help-dialog h2').textContent(),'Your little operations center');
  assert.equal(await page.locator('#prompt').inputValue(),draft);
@@ -53,12 +53,13 @@ try{
  assert.equal(await page.locator('#app').getAttribute('aria-hidden'),null,'Closing settings restores the application accessibility tree');
  // Rebuilt settings fields retain typed values and the working request identity.
  await page.evaluate(()=>openOperations('ai'));
+ await page.locator('[data-ai-source=custom]').click();
  await page.locator('#ai-endpoint').fill('https://summary.example.test/v1/chat/completions');
  await page.locator('#ai-model').fill('my-local-model');
  await page.evaluate(()=>I18n.setLanguage('es'));
  assert.equal(await page.locator('#ai-model').inputValue(),'my-local-model');
  assert.equal(await page.locator('#ai-endpoint').inputValue(),'https://summary.example.test/v1/chat/completions');
- assert((await page.locator('#operations-body h3').textContent()).includes('Resúmenes opcionales'));
+ assert((await page.locator('#operations-body h3').textContent()).includes('IA de Pulso y checkpoints'));
  assert.equal(await page.evaluate(()=>I18n.count('selected.count',1)),'1 proyecto seleccionado');
  await page.locator('#operations-close').click();
  await page.evaluate(()=>editWorkspace());await page.locator('#workspace-name').fill('Guardar - workspace personal');
@@ -84,7 +85,7 @@ try{
   }
  }
  const mobile=await browser.newPage({viewport:{width:390,height:844}});
- await mobile.goto(base+'?preview=1&lang=en');await mobile.locator('#settings').click();await mobile.locator('#app-language').selectOption('es');
+ await mobile.goto(base+'?preview=1&lang=en');await mobile.locator('#tools-menu summary').click();await mobile.locator('#settings').click();await mobile.locator('#app-language').selectOption('es');
  assert.equal(await mobile.locator('html').getAttribute('lang'),'es');
  assert(await mobile.locator('#app-language').isVisible(),'Language settings remain reachable on narrow viewports');
  assert(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Language settings must not overflow');

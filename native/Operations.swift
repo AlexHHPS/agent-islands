@@ -7,8 +7,8 @@ extension AppDelegate {
             guard let raw = row["value"] else { return nil }; return (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any]
         }
     }
-    func qaEvidence(_ agent: Agent) -> [[String: Any]] {
-        qaRecords("run").filter { row in row["profileId"] as? String == (agent.profileId ?? agent.harness) && row["projectId"] as? String == agent.projectId && (row["agentId"] as? String == agent.id || agent.threadId != nil && row["threadId"] as? String == agent.threadId) }.prefix(5).map { row in
+    func qaEvidence(_ agent: Agent, runs: [[String: Any]]? = nil) -> [[String: Any]] {
+        (runs ?? qaRecords("run")).filter { row in row["profileId"] as? String == (agent.profileId ?? agent.harness) && row["projectId"] as? String == agent.projectId && (row["agentId"] as? String == agent.id || agent.threadId != nil && row["threadId"] as? String == agent.threadId) }.prefix(5).map { row in
             row.filter { ["id", "name", "status", "revisionVerified", "revisionBefore", "revisionAfter", "finishedAt", "message", "checks"].contains($0.key) }
         }
     }

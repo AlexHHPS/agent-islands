@@ -27,16 +27,16 @@ try{
  await page.locator('#prompt').fill('/borrar');await page.locator('#prompt').press('Meta+Enter');
  assert.equal(await page.locator('#prompt').inputValue(),'');assert.equal(await page.locator('.composer-image').count(),0);
  assert(await page.evaluate(()=>messages.some(m=>m.action==='removeAttachment'&&m.attachmentId==='image-1')));
- await page.locator('#prompt').fill('/resumen');await page.locator('#prompt').press('Meta+Enter');
- assert(await page.evaluate(()=>messages.some(m=>m.action==='intelligence'&&m.kind==='recap')));
+ await page.locator('#checkpoint-refresh').click();
+ assert(await page.evaluate(()=>messages.some(m=>m.action==='intelligence'&&m.kind==='checkpoint')));
  assert.equal(await page.evaluate(()=>messages.filter(m=>m.action==='prompt').length),0,'Commands must not send agent turns');
  await page.evaluate(()=>receiveNative({event:'intelligenceResult',data:{requestId:aiRequestID,error:'Servidor de resúmenes desconectado'}}));
- assert(await page.locator('#ai-retry').isVisible());
+ assert(await page.locator('#checkpoint-status').isVisible());
  await page.evaluate(()=>selectAgent('goal'));
  assert((await page.locator('#external-notice').textContent()).includes('Restaurar la integración'));
  await page.locator('#analyze-goal').click();
  assert(await page.evaluate(()=>messages.some(m=>m.action==='intelligence'&&m.id==='goal'&&m.kind==='unblock')));
- assert(await page.locator('.agent-chip.signal-blocked').count()>0);
+ assert(await page.locator('#situation').isHidden());
  assert.deepEqual(errors,[]);
  console.log('PASS interactions: independent AI, failed connection/retry, actionable external goal, skills, draft isolation, asynchronous images, dictation insertion and erase command');
 }finally{await browser.close()}

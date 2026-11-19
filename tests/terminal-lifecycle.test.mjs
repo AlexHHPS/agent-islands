@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+const browser=await chromium.launch({headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1512,height:960}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{window.messages=[];window.webkit={messageHandlers:{native:{postMessage:m=>messages.push(m)}}}});
+ const agents=['codex','codex','codex','claude','claude','shell'].map((harness,i)=>({id:'a'+i,name:'Terminal '+i,projectId:'p',harness,managed:true,processRunning:true,state:'waiting',stateAt:200,...(i<2?{goalStatus:'in_progress',goalUpdatedAt:100}:{} )}));
+ const snapshot={native:true,projects:[{id:'p',name:'Product',path:'/tmp/product'}],agents,binaries:{codex:'/codex',claude:'/claude'},docker:{containers:[]}};
+ await page.goto(pathToFileURL(resolve('ui/index.html')).href);await page.evaluate(data=>{receiveNative({event:'snapshot',data});setView('terminals')},snapshot);
+ assert.equal(await page.locator('#attention-count').textContent(),'0');assert((await page.locator('#global-status').textContent()).includes('6 sesiones · 0 necesitan'));
+ assert.equal(await page.locator('.terminal-card[data-activity=working]').count(),2,'Active goals stay in progress despite old waiting labels');
+ const text='¿Qué alcance?\r\n❯ 1. Solo este producto\r\n  2. Todo el workspace\r\nEnter to select · Tab to switch\r\n';
+ await page.evaluate(bytes=>receiveNative({event:'terminalReplay',data:{id:'a2',cols:90,rows:28,bytes}}),Buffer.from(text).toString('base64'));
+ await page.waitForFunction(()=>document.querySelector('#attention-count').textContent==='1');
+ assert(await page.evaluate(()=>messages.some(m=>m.action==='terminalInteraction'&&m.id==='a2'&&m.kind==='question')),'An unselected terminal can report a real pending question');
+ await page.evaluate(bytes=>receiveNative({event:'terminal',data:{id:'a2',cols:90,rows:28,bytes}}),Buffer.from('\r\nTurn complete\r\n❯ \r\n').toString('base64'));
+ await page.waitForFunction(()=>document.querySelector('#attention-count').textContent==='0');
+ await page.evaluate(data=>receiveNative({event:'snapshot',data:{...data,agents:data.agents.map((a,i)=>i===3?{...a,interactionKind:'approval'}:a)}}),snapshot);assert.equal(await page.locator('#attention-count').textContent(),'1');
+ await page.evaluate(data=>receiveNative({event:'snapshot',data}),snapshot);assert.equal(await page.locator('#attention-count').textContent(),'0');
+ assert(await page.locator('.terminal-card[data-agent-id=a0] .avatar .icon').evaluate(el=>getComputedStyle(el).animationName!=='none'));
+ await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.terminal-card[data-agent-id=a0] .avatar .icon').evaluate(el=>getComputedStyle(el).animationName),'none');await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.evaluate(()=>selectAgent('a0'));await page.locator('#stop-agent').click();assert(await page.evaluate(()=>messages.some(m=>m.action==='stop'&&m.id==='a0')));
+ await page.evaluate(()=>receiveNative({event:'sessionCloseCancelled',data:{id:'a0'}}));assert(await page.locator('#agent-view').isVisible());assert.equal(await page.evaluate(()=>selected),'a0');
+ await page.locator('#stop-agent').click();await page.evaluate(()=>receiveNative({event:'sessionEnded',data:{id:'a0',requested:true}}));assert.equal(await page.evaluate(()=>view),'terminals');assert.equal(await page.locator('.terminal-card').count(),5);assert.equal(await page.locator('[data-agent-id=a0]').count(),0);
+ await page.locator('[data-agent-id=a4] .deck-close').click();assert(await page.locator('[data-agent-id=a4] .deck-close').isDisabled());await page.evaluate(()=>receiveNative({event:'sessionEnded',data:{id:'a4',requested:true}}));assert.equal(await page.locator('.terminal-card').count(),4);
+ assert.equal(await page.evaluate(()=>messages.filter(m=>['input','prompt','launch'].includes(m.action)).length),0,'Reading attention and closing never submit a provider turn');assert.deepEqual(errors,[]);
+ console.log('PASS terminal lifecycle: six healthy sessions need no attention; offscreen real questions, clearing, typed approvals, state animations/reduced motion, close cancellation, close return and direct mosaic close');
+}finally{await browser.close()}

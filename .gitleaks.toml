@@ -5,8 +5,8 @@ useDefault = true
 [[rules]]
 id = "generic-api-key"
 [[rules.allowlists]]
-description = "Upstream xterm symbol assignment; vendor SHA-256 is checked separately"
+description = "Upstream xterm and WebGL symbol assignments; vendor SHA-256 is checked separately"
 condition = "AND"
 regexTarget = "match"
-paths = ['''(?:^|/)ui/vendor/xterm\.js$''']
+paths = ['''(?:^|/)ui/vendor/(?:xterm|addon-webgl)\.js$''']
 regexes = ['''^t\.FourKeyMap=t\.TwoKeyMap=void\s*(?:0[; ]?)?$''', '''^t\.SequencerByKey=t\.Sequencer=t\.Throttler=void\s*(?:0[; ]?)?$''']

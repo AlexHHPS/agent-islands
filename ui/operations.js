@@ -2,9 +2,9 @@
 // The native bridge and the MCP clients use the same QA service and records.
 var operations={environments:[],recipes:[],runs:[],leases:[],auth:[],logins:[],installations:[],incidents:[]},operationsPending=new Map(),operationsDrafts=new Map(),operationsHealth=null,operationsTab='qa',aiSettings={configured:false};
 const operationsDialog=document.createElement('dialog');operationsDialog.id='operations-dialog';operationsDialog.dataset.slot='operations';
-operationsDialog.innerHTML=ht`<div class="dialog-heading"><div><span class="sheet-kicker">AGENT ISLANDS</span><h2>Comprobar y continuar</h2></div><button type="button" id="operations-close" class="icon-button" aria-label="Cerrar operaciones">×</button></div><nav class="operations-tabs" aria-label="Operaciones"><button data-operations-tab="qa">Pruebas</button><button data-operations-tab="profiles">Perfiles</button><button data-operations-tab="environments">Entornos</button><button data-operations-tab="health">Salud</button><button data-operations-tab="ai">IA</button></nav><p id="operations-status" role="status" hidden></p><div id="operations-body"></div>`;
+operationsDialog.innerHTML=ht`<div class="dialog-heading"><h2>QA y perfiles</h2><button type="button" id="operations-close" class="icon-button" aria-label="Cerrar operaciones" title="Cerrar operaciones">${icon('close')}</button></div><nav class="operations-tabs" aria-label="Operaciones"><button data-operations-tab="qa">Pruebas</button><button data-operations-tab="profiles">Perfiles</button><button data-operations-tab="environments">Entornos</button><button data-operations-tab="health">Salud</button><button data-operations-tab="ai">IA</button></nav><p id="operations-status" role="status" hidden></p><div id="operations-body"></div>`;
 document.body.append(operationsDialog);
-const operationsButton=document.createElement('button');operationsButton.id='open-operations';I18n.bind(operationsButton,"textContent",()=>I18n.t('QA y perfiles'));operationsButton.onclick=()=>openOperations();$('#add-project').before(operationsButton);
+const operationsButton=document.createElement('button');operationsButton.id='open-operations';operationsButton.innerHTML=ht`${icon('sliders')}<span>QA y perfiles</span>`;operationsButton.onclick=()=>openOperations();$('#settings').before(operationsButton);
 $('#operations-close').onclick=()=>operationsDialog.close();operationsDialog.addEventListener('click',e=>{if(e.target===operationsDialog){const r=operationsDialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)operationsDialog.close()}});
 $$('[data-operations-tab]').forEach(b=>b.onclick=()=>{operationsTab=b.dataset.operationsTab;renderOperations();if(operationsTab==='ai')operation('ai.get')});
 function availableProfiles(){return state.profiles || Object.keys(state.binaries).filter(h=>['codex','claude'].includes(h)).map(h=>({id:h,harness:h,name:h==='claude'?'Claude Code':'Codex',executable:state.binaries[h],configRoot:'',maxDelegates:4}))}
@@ -32,8 +32,12 @@ window.receiveNative=message=>{
   const pending=operationsPending.get(data.requestId);operationsPending.delete(data.requestId);
   if(data.error){$('#operations-status').hidden=false;I18n.bind($('#operations-status'),"textContent",()=>data.error);$('#operations-status').className='operations-error';return}
   $('#operations-status').hidden=true;
-  if(data.method==='snapshot'){const changed=JSON.stringify(operations)!==JSON.stringify(data.result);operations=data.result;if(changed&&!operationsDialog.querySelector('form:focus-within'))renderOperations();renderCheckpointEvidence()}
-  else if(data.method.startsWith('ai.')){aiSettings=data.result;if(operationsTab==='ai')renderOperations()}
+  if(data.method==='snapshot'){const changed=JSON.stringify(operations)!==JSON.stringify(data.result);operations=data.result;if(changed&&operationsTab!=='ai'&&!operationsDialog.querySelector('form:focus-within'))renderOperations();renderCheckpointEvidence()}
+  else if(data.method.startsWith('ai.')){
+    aiSettings=data.result;
+    if(data.method==='ai.save'&&aiPending){cancelPulse();renderSituation()}
+    if(operationsTab==='ai'&&(data.method!=='ai.get'||!$('#ai-settings-form')?.dataset.edited))renderOperations();
+  }
   else if(data.method==='contract.get'){if(data.result&&$('#task-contract-form'))for(const [field,value] of Object.entries({objective:data.result.objective,acceptance:data.result.acceptance,optional:data.result.optional,decisions:data.result.decisions}))$('#task-'+field).value=value || ''}
   else if(data.method==='health'){operationsHealth=data.result;if(operationsTab==='health')renderOperations()}
   else if(['profile.health','instructions.audit'].includes(data.method)){renderProfileFinding(data.result,data.method)}
@@ -80,27 +84,45 @@ function renderOperations(){
   $('#environment-form').onsubmit=e=>{e.preventDefault();const project=state.projects.find(p=>p.id===$('#environment-project').value);operation('environment.save',{id:$('#environment-id').value||undefined,name:$('#environment-name').value,projectId:project.id,projectPath:project.path,origin:$('#environment-origin').value,healthPath:$('#environment-health').value,authSelector:$('#environment-auth').value,revisionUrl:$('#environment-revision').value,expectedRevision:$('#environment-expected').value,legacyLockPath:$('#environment-legacy').value})};
   $('#recipe-form').onsubmit=e=>{e.preventDefault();try{operation('recipe.save',{name:$('#recipe-name').value,environmentId:$('#recipe-environment').value,mode:$('#recipe-mode').value,steps:JSON.parse($('#recipe-steps').value)})}catch{toast(I18n.t('Revisa el JSON del recorrido.'))}};
  }
- if(operationsTab==='ai'){
-  body.innerHTML=ht`<form id="ai-settings-form" class="operations-form"><h3>Resúmenes opcionales</h3><p>Al consultar, se enviarán el contexto seleccionado y fragmentos de conversación al servidor que configures. Las actualizaciones automáticas están desactivadas al abrir la app.</p><label>URL de Chat Completions<input id="ai-endpoint" type="url" required value="${esc(aiSettings.endpoint||'')}" placeholder="http://127.0.0.1:11434/v1/chat/completions"></label><label>Modelo<input id="ai-model" required maxlength="200" value="${esc(aiSettings.model||'')}" placeholder="Nombre del modelo en tu servidor"></label><label class="check-line"><input id="ai-requires-key" type="checkbox" ${aiSettings.requiresAPIKey?'checked':''}>El servidor necesita clave API</label><label>Límite de tokens<select id="ai-token-parameter"><option value="max_tokens">max_tokens · servidores compatibles</option><option value="max_completion_tokens">max_completion_tokens</option></select></label><div class="operations-actions"><button class="primary" type="submit">Guardar configuración</button><button id="ai-keychain" type="button" ${aiSettings.configured?'':'disabled'}>Guardar clave en el llavero…</button></div></form>`;
-  $('#ai-token-parameter').value=aiSettings.tokenLimitParameter||'max_tokens';
-  $('#ai-settings-form').onsubmit=e=>{e.preventDefault();operation('ai.save',{endpoint:$('#ai-endpoint').value,model:$('#ai-model').value,requiresAPIKey:$('#ai-requires-key').checked,tokenLimitParameter:$('#ai-token-parameter').value})};
-  $('#ai-keychain').onclick=()=>operation('ai.key');
- }
+ if(operationsTab==='ai')renderAISettings(body);
  if(operationsTab==='health'){
-  body.innerHTML=ht`<div class="operation-row"><div><strong>${operationsHealth?.browserAvailable?I18n.t('Chromium preparado'):I18n.t('Preparar Chromium')}</strong><small>${esc(operationsHealth?.node || I18n.t('Consultando runtime…'))}${operationsHealth?.checkedAt?' · '+esc(checkpointDate(operationsHealth.checkedAt)):''}</small></div><button id="qa-install">Preparar QA</button><button id="qa-health-refresh">Comprobar</button></div>${operations.installations.map(i=>ht`<p>${esc(statusLabel(i.status))} · Chromium</p>`).join('')}<div class="operations-section-heading"><h3>Conexiones e instrucciones</h3></div>${profiles.map(p=>ht`<article class="operation-row"><div><strong>${esc(p.name)}</strong><small>${esc(p.configRoot)}</small></div><button data-health-profile="${esc(p.id)}">Comprobar acceso</button><button data-audit-profile="${esc(p.id)}">Revisar instrucciones</button></article>`).join('')}<div id="profile-finding" role="status"></div>${(operations.incidents||[]).map(i=>ht`<article class="operation-row"><div><strong>${esc(statusLabel(i.status))} · ${i.count} veces</strong><small>${esc(i.message)}</small></div><button data-retry-run="${esc(i.lastRunId)}" data-profile="${esc(i.profileId)}">Reintentar comprobación</button></article>`).join('')}<p class="operation-meta">${esc(state.workspaceError || I18n.t('Registro local disponible. Los resultados se conservan al reiniciar.'))}</p>`;
+  body.innerHTML=ht`<div class="operation-row"><div><strong>${operationsHealth?.browserAvailable?I18n.t('Chromium preparado'):I18n.t('Preparar Chromium')}</strong><small>${esc(operationsHealth?.node || I18n.t('Consultando runtime…'))}${operationsHealth?.checkedAt?' · '+esc(checkpointDate(operationsHealth.checkedAt)):''}</small></div><button id="qa-install">Preparar QA</button><button id="qa-health-refresh" class="icon-button quiet-action" title="Comprobar" aria-label="Comprobar">${icon('refresh')}</button></div>${operations.installations.map(i=>ht`<p>${esc(statusLabel(i.status))} · Chromium</p>`).join('')}<div class="operations-section-heading"><h3>Conexiones e instrucciones</h3></div>${profiles.map(p=>ht`<article class="operation-row"><div><strong>${esc(p.name)}</strong><small>${esc(p.configRoot)}</small></div><button data-health-profile="${esc(p.id)}">Comprobar acceso</button><button data-audit-profile="${esc(p.id)}">Revisar instrucciones</button></article>`).join('')}<div id="profile-finding" role="status"></div>${(operations.incidents||[]).map(i=>ht`<article class="operation-row"><div><strong>${esc(statusLabel(i.status))} · ${i.count} veces</strong><small>${esc(i.message)}</small></div><button data-retry-run="${esc(i.lastRunId)}" data-profile="${esc(i.profileId)}">Reintentar comprobación</button></article>`).join('')}<p class="operation-meta">${esc(state.workspaceError || I18n.t('Registro local disponible. Los resultados se conservan al reiniciar.'))}</p>`;
   $$('[data-retry-run]').forEach(b=>b.onclick=()=>operation('run.retry',{id:b.dataset.retryRun,profileId:b.dataset.profile}));
   $('#qa-install').onclick=()=>operation('browser.install');$('#qa-health-refresh').onclick=()=>operation('health');$$('[data-health-profile]').forEach(b=>b.onclick=()=>operation('profile.health',{profileId:b.dataset.healthProfile}));$$('[data-audit-profile]').forEach(b=>b.onclick=()=>operation('instructions.audit',{profileId:b.dataset.auditProfile}));
  }
+}
+const localAIEndpoint='http://127.0.0.1:11434/v1/chat/completions';
+function renderAISettings(body){
+ const source=!aiSettings.endpoint||aiSettings.endpoint===localAIEndpoint?'local':'custom';
+ body.innerHTML=ht`<form id="ai-settings-form" class="operations-form"><h3>IA de Pulso y checkpoints</h3><div class="ai-source-options" role="group" aria-label="Servidor de IA"><button type="button" data-ai-source="local" class="engine-card"><span class="avatar">${icon('terminal')}</span><strong>Ollama local</strong>${icon('check')}</button><button type="button" data-ai-source="custom" class="engine-card"><span class="avatar">${icon('globe')}</span><strong>Servidor compatible</strong>${icon('check')}</button></div><label id="ai-endpoint-field">URL de Chat Completions<input id="ai-endpoint" type="url" required value="${esc(aiSettings.endpoint||'')}" placeholder="https://…/v1/chat/completions"></label><label>Modelo<input id="ai-model" required maxlength="200" value="${esc(aiSettings.model||'')}" placeholder="Nombre del modelo en tu servidor"></label><p>El modelo recibe el contexto de la conversación al generar un resumen.</p><details id="ai-advanced"><summary>Opciones avanzadas</summary><label class="check-line"><input id="ai-requires-key" type="checkbox" ${aiSettings.requiresAPIKey?'checked':''}>El servidor necesita clave API</label><label>Límite de tokens<select id="ai-token-parameter"><option value="max_tokens">max_tokens</option><option value="max_completion_tokens">max_completion_tokens</option></select></label></details><div class="operations-actions"><button class="primary" type="submit">Guardar configuración</button><button id="ai-keychain" type="button" ${aiSettings.configured&&aiSettings.requiresAPIKey?'':'hidden'}>${icon('lock')} Guardar clave en el llavero…</button></div></form>`;
+ const form=$('#ai-settings-form'),endpoint=$('#ai-endpoint'),key=$('#ai-requires-key'),parameter=$('#ai-token-parameter');
+ let customEndpoint=source==='custom'?endpoint.value:'',customKey=source==='custom'&&key.checked,customParameter=source==='custom'?aiSettings.tokenLimitParameter:null;
+ parameter.value=aiSettings.tokenLimitParameter||'max_tokens';
+ function choose(next,initial=false){
+   if(!initial&&form.dataset.source===next)return;
+   if(form.dataset.source==='custom'){customEndpoint=endpoint.value;customKey=key.checked;customParameter=parameter.value}
+   form.dataset.source=next;
+   $$('.ai-source-options [data-ai-source]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.aiSource===next)));
+   const local=next==='local';
+   $('#ai-endpoint-field').hidden=local;
+   endpoint.value=local?localAIEndpoint:customEndpoint;
+   if(!initial){key.checked=local?false:customKey;parameter.value=local?'max_tokens':customParameter||'max_tokens';form.dataset.edited='true'}
+ }
+ choose(source,true);
+ for(const button of $$('[data-ai-source]'))button.onclick=()=>choose(button.dataset.aiSource);
+ form.oninput=()=>form.dataset.edited='true';
+ form.onsubmit=e=>{e.preventDefault();operation('ai.save',{endpoint:endpoint.value,model:$('#ai-model').value,requiresAPIKey:key.checked,tokenLimitParameter:parameter.value})};
+ $('#ai-keychain').onclick=()=>operation('ai.key');
 }
 function renderProfileFinding(data,method){
  const box=$('#profile-finding');if(!box)return;
  box.innerHTML=method==='instructions.audit'?ht`<article class="operation-finding"><strong>${esc(profileName(data.profileId))}</strong><p>${data.importCount} documentos importados · ${Math.round((data.instructionBytes+data.importBytes)/1024)} KB de instrucciones.</p><p>Máximo configurado: ${data.maxDelegates} agentes.</p></article>`:ht`<article class="operation-finding"><strong>${data.authenticated?I18n.t('Acceso disponible'):I18n.t('Revisar acceso')} · ${esc(profileName(data.profileId))}</strong><p>${esc(data.account || data.error || I18n.t('Consulta de acceso completada.'))}</p><small>${esc(checkpointDate(data.checkedAt))}</small></article>`;
 }
 function renderCheckpointEvidence(){
- let region=$('#checkpoint-evidence');if(!region){region=document.createElement('div');region.id='checkpoint-evidence';$('#checkpoint-heading')?.append(region);$('#agent-checkpoints').append(region)}
+ let region=$('#checkpoint-evidence');if(!region){region=document.createElement('div');region.id='checkpoint-evidence';$('#agent-checkpoints').append(region)}
  const a=state.agents.find(a=>a.id===selected);if(!a){region.hidden=true;return}
  const runs=operations.runs.filter(r=>r.profileId===(a.profileId || a.harness)&&r.projectId===a.projectId&&(a.threadId?r.threadId===a.threadId:r.agentId===a.id));
- region.hidden=!runs.length;region.innerHTML=runs.slice(0,3).map(r=>ht`<button data-checkpoint-run="${esc(r.id)}">${esc(statusLabel(r.status))} · ${r.revisionVerified?I18n.t('Versión validada'):I18n.t('Versión sin verificar')} · ${esc(checkpointDate(r.startedAt))}</button>`).join('');region.querySelectorAll('button').forEach(b=>b.onclick=()=>openOperations('qa'));
+ region.hidden=!runs.length;if(!setMarkup(region,runs.slice(0,3).map(r=>ht`<button data-checkpoint-run="${esc(r.id)}">${esc(statusLabel(r.status))} · ${r.revisionVerified?I18n.t('Versión validada'):I18n.t('Versión sin verificar')} · ${esc(checkpointDate(r.startedAt))}</button>`).join('')))return;region.querySelectorAll('button').forEach(b=>b.onclick=()=>openOperations('qa'));
 }
 const originalRenderCheckpoints=renderCheckpoints;
 renderCheckpoints=function(){originalRenderCheckpoints();renderCheckpointEvidence()};

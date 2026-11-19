@@ -12,7 +12,7 @@ node scripts/locales.mjs --write
 node scripts/vendor.mjs
 node scripts/package-qa.mjs
 clang -Wall -Wextra -O2 -arch "$ARCH" -mmacosx-version-min=14.0 native/pty.c -o "$APP/Contents/MacOS/islands-pty"
-swiftc -swift-version 5 -O -target "$ARCH-apple-macosx14.0" native/main.swift native/Conversations.swift native/Intelligence.swift native/Workspace.swift native/Operations.swift native/ProjectWorkspaces.swift native/Browser.swift native/AgentState.swift native/QAClient.swift native/AIConfiguration.swift native/Localization.swift -o "$APP/Contents/MacOS/Agent Islands" -framework Cocoa -framework WebKit -framework UserNotifications -framework AVFoundation -framework Speech -framework Security -framework LocalAuthentication -lsqlite3
+swiftc -swift-version 5 -O -target "$ARCH-apple-macosx14.0" native/main.swift native/Conversations.swift native/Intelligence.swift native/Workspace.swift native/Operations.swift native/ProjectWorkspaces.swift native/Browser.swift native/AgentState.swift native/TerminalOutput.swift native/QAClient.swift native/AIConfiguration.swift native/Localization.swift -o "$APP/Contents/MacOS/Agent Islands" -framework Cocoa -framework WebKit -framework UserNotifications -framework AVFoundation -framework Speech -framework Security -framework LocalAuthentication -lsqlite3
 cp native/Info.plist "$APP/Contents/Info.plist"
 cp -R native/es.lproj native/en.lproj "$APP/Contents/Resources/"
 cp -R ui "$APP/Contents/Resources/"

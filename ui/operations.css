@@ -1,5 +1,5 @@
 #operations-dialog{width:min(68rem,calc(100vw - var(--space-8)));max-height:calc(100svh - var(--space-8));overflow:auto}
-body:has(#operations-dialog[open]) .workspace{visibility:hidden}
+body.operations-dialog-open .workspace{visibility:hidden}
 #operations-dialog h2{font-size:var(--text-xl)}
 .operations-tabs{display:flex;gap:var(--space-2);border-bottom:1px solid var(--border);padding-bottom:var(--space-3);margin-bottom:var(--space-4);flex-wrap:wrap}
 .operations-tabs button{min-height:44px;border-radius:var(--radius-full);font-size:var(--text-sm)}

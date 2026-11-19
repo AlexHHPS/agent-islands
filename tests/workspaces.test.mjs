@@ -9,8 +9,8 @@ try{
  await page.goto(pathToFileURL(resolve('ui/index.html')).href);
  const projects=[{id:'api',name:'API',path:'/projects/api'},{id:'web',name:'Web',path:'/projects/web'},{id:'other',name:'Otro negocio',path:'/projects/other'}],group={id:'workspace-one',name:'Portal',projectIds:['web','api']};
  const initial={native:true,projects,allProjects:projects,projectWorkspaces:[],activeWorkspaceId:'',agents:[{id:'a',projectId:'api',name:'API agent',harness:'codex',managed:true,processRunning:true,state:'ready'},{id:'b',projectId:'other',name:'Other agent',harness:'claude',managed:true,processRunning:true,state:'active'}],binaries:{codex:'/bin/codex',claude:'/bin/claude'},docker:{containers:[]}};
- await page.evaluate(data=>{receiveNative({event:'snapshot',data});aiAuto=false},initial);
- await page.locator('#workspace-create').click();assert(await page.locator('#workspace-save').isDisabled());
+ await page.evaluate(data=>{receiveNative({event:'snapshot',data});setView('world')},initial);
+ await page.locator('#workspace-menu summary').click();await page.locator('#workspace-create').click();assert(await page.locator('#workspace-save').isDisabled());
  assert((await page.locator('.workspace-project span').first().boundingBox()).width>100,'Project names and paths must remain readable beside the checkbox');
  await page.locator('#workspace-name').fill('Portal');await page.locator('#workspace-projects input[value=api]').check();await page.locator('#workspace-projects input[value=web]').check();
  await page.locator('#workspace-primary').selectOption('web');await page.locator('#workspace-save').click();
@@ -22,11 +22,11 @@ try{
  assert(await page.locator('#workspace-dialog').isHidden());assert.equal(await page.locator('#workspace-select').inputValue(),group.id);assert.equal(await page.locator('#world .island').count(),2);assert(!(await page.locator('#team-list').textContent()).includes('Other agent'));assert((await page.locator('#workspace-background').textContent()).includes('1 sesión'));
  await page.evaluate(()=>launchDialog());assert.deepEqual(await page.locator('#launch-project option').evaluateAll(els=>els.map(e=>e.value)),['web','api']);await page.locator('#launch-dialog .close-dialog').first().click();
  await page.evaluate(()=>selectAgent('a'));await page.locator('#prompt').fill('Conserva este encargo');
- await page.locator('#workspace-select').selectOption('');assert(await page.evaluate(()=>messages.some(m=>m.action==='workspaceActivate'&&m.workspaceId==='')));
+ await page.locator('#workspace-menu summary').click();await page.locator('#workspace-select').selectOption('');assert(await page.evaluate(()=>messages.some(m=>m.action==='workspaceActivate'&&m.workspaceId==='')));
  await page.evaluate(data=>receiveNative({event:'snapshot',data:{...data,projectWorkspaces:[{id:'workspace-one',name:'Portal',projectIds:['web','api']}]}}),initial);
  assert.equal(await page.locator('#team-list [data-agent]').count(),2);assert.equal(await page.locator('#world .island').count(),4);
  await page.evaluate(()=>selectAgent('a'));assert.equal(await page.locator('#prompt').inputValue(),'Conserva este encargo','Workspace switching must preserve terminal drafts');
- await page.evaluate(data=>receiveNative({event:'snapshot',data}),scoped);await page.locator('#workspace-edit').click();assert.equal(await page.locator('#workspace-projects input:checked').count(),2);
+ await page.evaluate(data=>receiveNative({event:'snapshot',data}),scoped);await page.locator('#workspace-menu summary').click();await page.locator('#workspace-edit').click();assert.equal(await page.locator('#workspace-projects input:checked').count(),2);
  await page.locator('#workspace-add-folders').click();assert(await page.evaluate(()=>messages.some(m=>m.action==='addProject'&&m.registrationOnly)));
  await page.evaluate(data=>{receiveNative({event:'snapshot',data:{...data,allProjects:[...data.allProjects,{id:'new',name:'Biblioteca',path:'/projects/lib'}]}});receiveNative({event:'workspaceProjectsAdded',data:{projectIds:['new']}})},scoped);
  assert(await page.locator('#workspace-projects input[value=new]').isChecked());assert.equal(await page.locator('#workspace-name').inputValue(),'Portal');

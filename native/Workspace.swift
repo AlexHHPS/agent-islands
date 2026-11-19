@@ -68,7 +68,7 @@ func workspaceSelfTests(_ temporary: URL) throws {
 
 let storedAgentLimit = 100
 extension Agent {
-    var lastActivity: Double { max(stateAt ?? 0, taskAt ?? 0, responseAt ?? 0, contextAt ?? 0, goalUpdatedAt ?? 0) }
+    var lastActivity: Double { max(closedAt ?? 0, stateAt ?? 0, taskAt ?? 0, responseAt ?? 0, contextAt ?? 0, goalUpdatedAt ?? 0) }
 }
 
 struct HarnessProfile: Codable {

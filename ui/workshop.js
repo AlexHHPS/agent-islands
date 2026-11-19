@@ -13,7 +13,7 @@ function goalBudgetRemaining(a) {
 function workshopFigure(project,index,agents,onPick,docker=false) {
   const variant=[...project.name].reduce((n,c)=>(n+c.charCodeAt(0))%3,0);
   return Diorama.figure({
-    name:'campus-'+index,size:'hero',theme:{base:'soft',accent:'#66816b',bg:'transparent',halo:.2},
+    name:'campus-'+index,size:'hero',theme:{base:'soft',accent:'#66816b',bg:'transparent',halo:0},
     title:docker?I18n.t('Puerto Docker'):project.name,
     means:I18n.t('Un campus de trabajo donde agentes, goals y estados se hacen visibles en pequeños talleres.'),
     hint:I18n.t('Hover the workshop roof; click the observatory or a robot to open its conversation.'),
