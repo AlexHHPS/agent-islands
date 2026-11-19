@@ -15,7 +15,7 @@ let current=sections.includes(query.get('section'))?query.get('section'):'genera
 // The main window remembers the accent locally; start from it so the page does not flash green before the native event.
 try{const saved=localStorage.getItem('islands.accent');if(saved)state.accent=saved}catch{}
 document.documentElement.dataset.accent=state.accent;
-if(!native&&query.has('preview'))state={binaries:{codex:'/opt/homebrew/bin/codex',claude:'/Users/you/.local/bin/claude',docker:'/usr/local/bin/docker'},profiles:[{id:'codex',harness:'codex'},{id:'claude',harness:'claude'},{id:'claude-personal',harness:'claude'}],accent:'green',style:'classic',notifications:true,voice:false,appearance:'system',navigation:'top',aiSource:'localhost · llama3.1',version:'0.18.0',activity:activityDefaults()};
+if(!native&&query.has('preview'))state={binaries:{codex:'/opt/homebrew/bin/codex',claude:'/Users/you/.local/bin/claude',docker:'/usr/local/bin/docker'},profiles:[{id:'codex',harness:'codex'},{id:'claude',harness:'claude'},{id:'claude-personal',harness:'claude'}],accent:'green',style:'classic',notifications:true,voice:false,appearance:'system',navigation:'top',aiSource:'localhost · llama3.1',version:'0.17.1',activity:activityDefaults()};
 
 function sectionLabel(id){return {general:t('General'),alerts:t('Avisos'),integrations:t('Integraciones'),ai:t('Inteligencia'),help:t('Ayuda'),about:t('Acerca de')}[id]}
 function renderNav(){

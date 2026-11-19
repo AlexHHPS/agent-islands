@@ -21,6 +21,37 @@ static int fullwrite(int fd, const void *p, size_t n) {
         if (k <= 0) return -1; b += k; n -= k; }
     return 0;
 }
+
+static pid_t reap_child(pid_t child, int *status) {
+    const int attempts = 20;
+    for (int i = 0; i <= attempts; i++) {
+        pid_t result = waitpid(child, status, WNOHANG);
+        if (result == child || (result < 0 && errno != EINTR)) return result;
+        if (i < attempts) usleep(50000);
+    }
+    return 0;
+}
+
+static int finish_session(int master, pid_t child, int status, int reaped) {
+    if (!reaped) {
+        kill(-child, SIGHUP);
+        kill(-child, SIGTERM);
+    }
+    // Release the PTY before waiting for a child that may be closing its slave.
+    close(master);
+    if (!reaped) {
+        pid_t result = reap_child(child, &status);
+        if (result == 0) {
+            kill(-child, SIGKILL);
+            result = reap_child(child, &status);
+        }
+        // On macOS a child can stay in the exiting state after SIGKILL.
+        if (result == 0) return 128 + SIGKILL;
+        if (result < 0) return 71;
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+}
+
 int main(int argc, char **argv) {
     if (argc < 3) { fprintf(stderr, "usage: islands-pty cwd executable [args...]\n"); return 64; }
     int master; struct winsize ws = { .ws_row = 28, .ws_col = 90 };
@@ -34,7 +65,8 @@ int main(int argc, char **argv) {
     // A blocking paste can fill the terminal's echo buffer while this same
     // process is waiting to finish writing. Drain output while input is queued.
     if (fcntl(master, F_SETFL, fcntl(master, F_GETFL) | O_NONBLOCK) < 0) {
-        kill(-child, SIGTERM); close(master); waitpid(child, NULL, 0); return 71;
+        finish_session(master, child, 0, 0);
+        return 71;
     }
     signal(SIGTERM, stop); signal(SIGINT, stop); signal(SIGHUP, stop); signal(SIGPIPE, SIG_IGN);
     unsigned char input[1048581]; size_t have = 0; int status = 0, reaped = 0;
@@ -79,14 +111,5 @@ int main(int argc, char **argv) {
         if (r == child) { reaped = 1; /* Drain remaining PTY bytes before exiting. */ }
     }
     free(pending);
-    if (!reaped) {
-        kill(-child, SIGHUP); kill(-child, SIGTERM);
-        for (int i = 0; i < 20; i++) {
-            if (waitpid(child, &status, WNOHANG) == child) { reaped = 1; break; }
-            usleep(50000);
-        }
-        if (!reaped) { kill(-child, SIGKILL); waitpid(child, &status, 0); }
-    }
-    close(master);
-    return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+    return finish_session(master, child, status, reaped);
 }

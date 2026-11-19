@@ -2,7 +2,9 @@
 
 Changes are grouped by user-visible behavior. Versions before public distribution were local previews.
 
-## Unreleased — Native macOS shell
+## 0.17.1 — Native macOS shell and terminal shutdown
+
+- Close the PTY master before reaping the child and limit the wait after SIGKILL. This lets the helper exit even if macOS leaves its child stuck while exiting.
 
 - Settings opens in its own window (General, Avisos, Integraciones, Inteligencia, Ayuda, Acerca de) with search-free sections, segmented controls and keyboard navigation. ⌘, focuses it if it is already open.
 - Navigation can sit above the content as a toolbar (default) or as vertical tabs on the left or right. Islands in the vertical tabs show the marks of the agents working there and a dot for their most urgent state.
@@ -14,7 +16,7 @@ Changes are grouped by user-visible behavior. Versions before public distributio
 - Menus behave like NSMenu: a press outside closes them, one is open at a time, choosing an item closes it, arrows move between items and they close when the window loses focus. The workspace picker is a pop-up button with checkable items.
 - Fix Settings sections that could not scroll, inspector rows whose state label was pushed out of the panel, and dialogs that closed after a text selection was dragged out of a field.
 
-## 0.18.0 — Terminal-first workspace
+### Terminal-first workspace
 
 - Open directly in Terminales. Mundo pairs compact island cards with a wider team sidebar and consistent status labels.
 - Pulso shows actionable local signals. Review opens the specific agent, and Continue sends one turn to an eligible terminal.

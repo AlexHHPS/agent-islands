@@ -29,6 +29,16 @@ def until(proc, expected, timeout=5):
     assert expected in result, (expected, result)
     return result
 
+def wait_for_exit(pid, timeout=4):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(.05)
+    raise AssertionError(f"Test process {pid} survived shutdown")
+
 with tempfile.TemporaryDirectory(prefix="islands-pty-") as root:
     proc = subprocess.Popen([str(HELPER), root, "/bin/cat"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     packet(proc, b"D", "mensaje-ñ-島\n".encode())
@@ -36,6 +46,52 @@ with tempfile.TemporaryDirectory(prefix="islands-pty-") as root:
     proc.stdin.close()
     proc.wait(timeout=4)
     print("PASS PTY: Unicode input/output and cleanup on EOF")
+
+    supervisor_script = r"""
+import signal
+import subprocess
+import sys
+
+helper = subprocess.Popen(
+    [sys.argv[1], sys.argv[2], "/bin/sh", "-c", 'printf "%s\n" "$$"; exec /bin/cat'],
+    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+)
+child = int(helper.stdout.readline())
+print(helper.pid, child, flush=True)
+signal.pause()
+"""
+    supervisor = subprocess.Popen(
+        [sys.executable, "-c", supervisor_script, str(HELPER), root], stdout=subprocess.PIPE,
+    )
+    helper_pid = child_pid = None
+    try:
+        helper_pid, child_pid = map(int, until(supervisor, b"\n").split())
+        supervisor.terminate()
+        assert supervisor.wait(timeout=4) == -signal.SIGTERM
+        wait_for_exit(helper_pid)
+        helper_pid = None
+        wait_for_exit(child_pid)
+        child_pid = None
+    finally:
+        if supervisor.poll() is None:
+            supervisor.kill()
+            supervisor.wait(timeout=4)
+        supervisor.stdout.close()
+        for pid in (child_pid, helper_pid):
+            if pid is not None:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+    print("PASS PTY: the helper and its child exit when their parent receives SIGTERM")
+
+    shutdown_test = Path(root) / "pty-shutdown-test"
+    subprocess.run(
+        ["cc", "-Wall", "-Wextra", str(ROOT / "tests" / "pty-shutdown.c"), "-o", str(shutdown_test)],
+        check=True, timeout=20,
+    )
+    subprocess.run([str(shutdown_test)], check=True, timeout=4)
+    print("PASS PTY: the master closes and reaping stays bounded even when SIGKILL never completes")
 
     echo = "import tty,os;tty.setraw(0);os.write(1,b'RAW-READY');exec('while True:\\n d=os.read(0,4096)\\n if not d: break\\n os.write(1,d)')"
     proc = subprocess.Popen([str(HELPER), root, sys.executable, "-c", echo], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
